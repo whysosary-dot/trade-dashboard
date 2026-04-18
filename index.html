@@ -442,7 +442,7 @@
 
       <div class="info-banner">
         <div class="info-icon">i</div>
-        <div>HS코드 6자리까지는 국제 공통입니다. 예시: <b>854232</b>(메모리), <b>3304</b>(화장품), <b>870380</b>(전기차). <a href="https://www.trade.gov/harmonized-system-hs-codes" target="_blank" style="color:inherit;text-decoration:underline">HS코드 조회 →</a></div>
+        <div>HS코드 6자리까지는 국제 공통. 예: <b>854232</b>(메모리), <b>3304</b>(화장품), <b>870380</b>(전기차). 검색: <a href="https://www.tariffnumber.com/" target="_blank" style="color:inherit;text-decoration:underline">tariffnumber.com</a> · <a href="https://unipass.customs.go.kr/clip/index.do" target="_blank" style="color:inherit;text-decoration:underline">관세청 유니패스</a></div>
       </div>
 
       <div class="card" style="margin-bottom:16px">
@@ -521,6 +521,11 @@
         </div>
       </div>
 
+      <div class="info-banner">
+        <div class="info-icon">i</div>
+        <div>데이터 소스: <b>UN Comtrade</b> · EU-27 (2020 이후) 기준 · HS 2~6자리 지원 · HS 코드 찾기: <a href="https://www.tariffnumber.com/" target="_blank" style="color:inherit;text-decoration:underline">tariffnumber.com</a></div>
+      </div>
+
       <div class="card" style="margin-bottom:16px">
         <div class="hs-search">
           <select class="control" id="euHsPreset">
@@ -528,11 +533,19 @@
             <option value="854232">854232 · 메모리 반도체</option>
             <option value="870380">870380 · 전기자동차</option>
             <option value="190230">190230 · 인스턴트 라면</option>
+            <option value="271012">271012 · 자동차 휘발유</option>
+            <option value="__custom__">▶ 직접 입력 (2~6자리)</option>
           </select>
+          <input class="control" type="text" id="euHsInput" placeholder="HS 코드 예: 854231" style="max-width:200px;display:none">
           <div class="seg" data-group="eu-period">
             <button class="active" data-val="monthly">월별</button>
             <button data-val="quarterly">분기별</button>
           </div>
+          <div class="seg" data-group="eu-flow">
+            <button class="active" data-val="M">수입</button>
+            <button data-val="X">수출</button>
+          </div>
+          <button class="btn" id="euHsApply">조회</button>
         </div>
       </div>
 
@@ -576,7 +589,7 @@
 
       <div class="info-banner">
         <div class="info-icon">i</div>
-        <div>한국 통계는 미국·유럽 대비 <b>1~2개월 빨리</b> 공개됩니다 (관세청이 월초에 전월 확정치 발표). 흐름 선행 확인용으로 유용합니다.</div>
+        <div>한국 통계는 미국·유럽 대비 <b>1~2개월 빨리</b> 공개됩니다 (관세청이 월초에 전월 확정치 발표). HS 코드 검색: <a href="https://www.tariffnumber.com/" target="_blank" style="color:inherit;text-decoration:underline">tariffnumber.com</a> · <a href="https://unipass.customs.go.kr/clip/index.do" target="_blank" style="color:inherit;text-decoration:underline">관세청 유니패스</a></div>
       </div>
 
       <div class="card" style="margin-bottom:16px">
@@ -651,6 +664,11 @@
         </div>
       </div>
 
+      <div class="info-banner">
+        <div class="info-icon">i</div>
+        <div>데이터 소스: <b>U.S. Census NAICS API</b> · 6자리 NAICS 코드 지원 · NAICS 코드 찾기: <a href="https://www.naics.com/search/" target="_blank" style="color:inherit;text-decoration:underline">naics.com</a></div>
+      </div>
+
       <div class="card" style="margin-bottom:16px">
         <div class="hs-search">
           <select class="control" id="naicsPreset">
@@ -658,7 +676,11 @@
             <option value="335311">335311 · 변압기 제조업</option>
             <option value="334413">334413 · 반도체 제조업</option>
             <option value="325620">325620 · 화장품 · 위생용품</option>
+            <option value="336111">336111 · 승용차 제조</option>
+            <option value="__custom__">▶ 직접 입력 (6자리 NAICS)</option>
           </select>
+          <input class="control" type="text" id="naicsInput" placeholder="NAICS 코드 예: 336991" style="max-width:200px;display:none">
+          <button class="btn" id="naicsApply">조회</button>
         </div>
       </div>
 
@@ -707,11 +729,21 @@
       <div class="card" style="margin-bottom:16px">
         <div class="hs-search">
           <select class="control" id="m3Preset">
-            <option value="auto">자동차 · 부품</option>
-            <option value="electric">전력기기 · 변압기</option>
-            <option value="machinery">산업용 기계</option>
-            <option value="computers">컴퓨터 · 전자</option>
+            <option value="MVP">MVP · 자동차 · 부품</option>
+            <option value="ELE">ELE · 전기장비 · 가전</option>
+            <option value="MAC">MAC · 산업용 기계</option>
+            <option value="COMPUT">COMPUT · 컴퓨터 · 전자</option>
+            <option value="AM">AM · 전체 제조업</option>
+            <option value="DUR">DUR · 내구재 전체</option>
+            <option value="NDUR">NDUR · 비내구재 전체</option>
+            <option value="SEMI">SEMI · 반도체 · 부품</option>
+            <option value="__custom__">▶ 직접 입력 (M3 category_code)</option>
           </select>
+          <input class="control" type="text" id="m3Input" placeholder="예: MVP, COMPUT, AM" style="max-width:220px;display:none">
+          <button class="btn" id="m3Apply">조회</button>
+        </div>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--text-muted)">
+          M3 category_code 예시: <code>AM</code>(전체 제조업) · <code>MVP</code>(자동차) · <code>COMPUT</code>(컴퓨터·전자) · <code>ELE</code>(전기장비) · <code>MAC</code>(기계) · <code>SEMI</code>(반도체) · <code>DUR</code>(내구재) · <code>NDUR</code>(비내구재)
         </div>
       </div>
 
@@ -1626,55 +1658,143 @@ document.querySelectorAll('[data-group="hs-metric"] button').forEach(b=>{
 });
 
 /* =====================================
-   HS CODE EU
+   HS CODE EU  (UN Comtrade · EU-27)
    ===================================== */
-function renderHsEU(){
-  const hs = document.getElementById('euHsPreset').value;
-  const data = EU_HS_DATA[hs];
-  document.getElementById('euChartTitle').textContent = data.title;
+let euState = { hs:'3304', period:'monthly', flow:'M' /* M=수입, X=수출 */ };
+
+// Comtrade는 한 번에 최대 12 period 까지만 허용 → 12개월씩 배치
+async function fetchComtradeBatch(hs, flow, periods){
+  const u = `https://comtradeapi.un.org/public/v1/preview/C/M/HS?reporterCode=97&period=${periods.join(',')}&cmdCode=${encodeURIComponent(hs)}&flowCode=${flow}&partnerCode=0`;
+  const r = await fetch(u);
+  if (!r.ok) throw new Error(`Comtrade HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.error) throw new Error(`Comtrade: ${j.error}`);
+  return j.data || [];
+}
+
+async function ensureEuHsData(hs, flow){
+  const cacheKey = `${hs}:${flow}`;
+  if (EU_HS_DATA[cacheKey] && EU_HS_DATA[cacheKey].countries && EU_HS_DATA[cacheKey].countries.real) return true;
+  // 2023-01 ~ current 생성
+  const now = new Date();
+  const allPeriods = [];
+  for (let y = 2023; y <= now.getFullYear(); y++) {
+    const maxM = (y === now.getFullYear()) ? now.getMonth() + 1 : 12;
+    for (let m = 1; m <= maxM; m++) allPeriods.push(`${y}${String(m).padStart(2,'0')}`);
+  }
+  // 12개씩 배치
+  const chunks = [];
+  for (let i = 0; i < allPeriods.length; i += 12) chunks.push(allPeriods.slice(i, i+12));
+  const byMonth = {};
+  try {
+    for (const ch of chunks) {
+      const rows = await fetchComtradeBatch(hs, flow, ch);
+      for (const row of rows) {
+        if (row.partnerCode !== 0) continue; // World 총합만
+        const p = String(row.period);
+        const ym = `${p.slice(0,4)}-${p.slice(4,6)}`;
+        byMonth[ym] = row.primaryValue || 0;
+      }
+    }
+  } catch (e) {
+    alert(`Comtrade API 호출 실패: ${e.message}`);
+    return false;
+  }
+  const ms = Object.keys(byMonth).sort();
+  if (ms.length === 0) { alert(`EU HS ${hs} (${flow}) — Comtrade 데이터 없음.\n6자리까지만 지원됩니다.`); return false; }
+  EU_HS_DATA[cacheKey] = {
+    title: `🇪🇺 EU-27 HS ${hs} ${flow==='M'?'수입':'수출'} 추이 · 실데이터`,
+    unit: 'USD',
+    countries: { real: alignToMonths(ms, ms.map(m=>byMonth[m])) },
+  };
+  return true;
+}
+
+async function renderHsEU(){
+  const preset = document.getElementById('euHsPreset').value;
+  const inputEl = document.getElementById('euHsInput');
+  let hs = preset === '__custom__' ? (inputEl.value.trim() || euState.hs) : preset;
+  if (!/^\d{2,6}$/.test(hs)) { alert('EU HS 코드는 2~6자리로 입력해주세요 (Comtrade 제약).'); return; }
+  euState.hs = hs;
+
+  const titleEl = document.getElementById('euChartTitle');
+  titleEl.textContent = `EU HS ${hs} 실데이터 조회 중...`;
+  const ok = await ensureEuHsData(hs, euState.flow);
+  if (!ok) { titleEl.textContent = `EU HS ${hs} — 데이터 없음`; return; }
+  const data = EU_HS_DATA[`${hs}:${euState.flow}`];
+  titleEl.textContent = data.title;
 
   destroyChart('eu-main'); destroyChart('eu-share'); destroyChart('eu-donut');
 
-  const datasets = Object.entries(data.countries).map(([c,series])=>
-    makeAreaDataset(C_NAMES[c]||c, series, COLORS[c]||'#888', {fill:false})
-  );
-  charts['eu-main'] = new Chart(document.getElementById('chart-eu-main'),{
-    type:'line', data:{labels:months, datasets}, options: baseOptions()
+  const series = data.countries.real;
+  const labels = euState.period === 'monthly' ? months : quarterize(months);
+  const plot   = euState.period === 'monthly' ? series : sumByQuarter(series.map(v=>v||0));
+
+  charts['eu-main'] = new Chart(document.getElementById('chart-eu-main'), {
+    type: 'line',
+    data: { labels, datasets: [ makeAreaDataset(`EU-27 ${euState.flow==='M'?'수입':'수출'} (전체)`, plot, '#4F6BED', {fill:true}) ] },
+    options: baseOptions({tooltipCallbacks:{
+      label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y?ctx.parsed.y.toLocaleString():'-'} USD`
+    }})
   });
 
-  // Korea share
-  const totals = months.map((_,i)=>Object.values(data.countries).reduce((s,arr)=>s+arr[i],0));
-  const shareKorea = (data.countries.korea||[]).map((v,i)=>+(v/totals[i]*100).toFixed(1));
-  charts['eu-share'] = new Chart(document.getElementById('chart-eu-share'),{
-    type:'line',
-    data:{labels:months, datasets:[
-      makeAreaDataset('한국 점유율', shareKorea, COLORS.korea, {fill:true})
-    ]},
-    options: baseOptions({tooltipCallbacks:{label:(c)=>`${c.dataset.label}: ${c.parsed.y}%`}})
+  // 연도별 누적 비교 차트 (donut 자리에 활용)
+  const byYear = {};
+  months.forEach((m,i)=>{
+    const y = m.split('-')[0];
+    if (!byYear[y]) byYear[y] = 0;
+    byYear[y] += series[i] || 0;
+  });
+  const years = Object.keys(byYear).filter(y=>byYear[y]>0);
+  charts['eu-donut'] = new Chart(document.getElementById('chart-eu-donut'), {
+    type: 'bar',
+    data: { labels: years, datasets: [{
+      label: '연간 누계',
+      data: years.map(y=>byYear[y]),
+      backgroundColor: '#4F6BED',
+      borderRadius: 6
+    }] },
+    options: { ...baseOptions(), plugins:{...baseOptions().plugins, legend:{display:false}} }
   });
 
-  // Donut recent 12
-  const last12={};
-  Object.entries(data.countries).forEach(([c,s])=>last12[c]=s.slice(-12).reduce((a,b)=>a+b,0));
-  const total = Object.values(last12).reduce((a,b)=>a+b,0);
-  charts['eu-donut'] = new Chart(document.getElementById('chart-eu-donut'),{
-    type:'doughnut',
-    data:{
-      labels:Object.keys(last12).map(c=>C_NAMES[c]||c),
-      datasets:[{data:Object.values(last12).map(v=>(v/total*100).toFixed(1)),
-        backgroundColor:Object.keys(last12).map(c=>COLORS[c]||'#888'), borderWidth:0}]
-    },
-    options:{responsive:true, maintainAspectRatio:false, cutout:'55%',
-      plugins:{legend:{position:'right',labels:{color:cssVar('--text-muted'),usePointStyle:true, boxWidth:10}},
-        tooltip:{backgroundColor:cssVar('--surface'), borderColor:cssVar('--border'),borderWidth:1,titleColor:cssVar('--text'), bodyColor:cssVar('--text-muted'),
-          callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}
+  // YoY 변화 (최근 12 vs 직전 12)
+  const last12 = series.slice(-12).filter(v=>v!=null).reduce((a,b)=>a+b,0);
+  const prev12 = series.slice(-24,-12).filter(v=>v!=null).reduce((a,b)=>a+b,0);
+  const yoy = prev12 ? ((last12-prev12)/prev12*100) : 0;
+  charts['eu-share'] = new Chart(document.getElementById('chart-eu-share'), {
+    type:'bar',
+    data:{labels:['직전 12개월','최근 12개월'], datasets:[{
+      label:'누계',
+      data:[prev12,last12],
+      backgroundColor:[hexToRgba('#4F6BED',0.4), hexToRgba('#4F6BED',0.85)],
+      borderRadius:6
+    }]},
+    options:{...baseOptions(), plugins:{...baseOptions().plugins, legend:{display:false}, tooltip:{
+      callbacks:{label:(c)=>`${c.parsed.y.toLocaleString()} USD`, afterLabel:(c)=>c.dataIndex===1?`YoY ${yoy.toFixed(1)}%`:''}
+    }}}
   });
 }
-document.getElementById('euHsPreset').addEventListener('change', renderHsEU);
+document.getElementById('euHsPreset').addEventListener('change', (e)=>{
+  const inp = document.getElementById('euHsInput');
+  if (e.target.value === '__custom__') { inp.style.display=''; inp.focus(); return; }
+  inp.style.display = 'none';
+  renderHsEU();
+});
+document.getElementById('euHsApply').addEventListener('click', renderHsEU);
+document.getElementById('euHsInput').addEventListener('keydown', e=>{ if(e.key==='Enter') renderHsEU(); });
 document.querySelectorAll('[data-group="eu-period"] button').forEach(b=>{
   b.addEventListener('click', ()=>{
     b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
+    euState.period = b.dataset.val;
+    renderHsEU();
+  });
+});
+document.querySelectorAll('[data-group="eu-flow"] button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    euState.flow = b.dataset.val;
     renderHsEU();
   });
 });
@@ -1847,12 +1967,68 @@ document.querySelectorAll('[data-group="kr-period"] button').forEach(b=>{
 });
 
 /* =====================================
-   NAICS
+   NAICS  (Census NAICS API · imports + exports)
    ===================================== */
-function renderNaics(){
-  const code = document.getElementById('naicsPreset').value;
+let naicsState = { code:'311824' };
+
+async function fetchCensusNaics(direction, code, key){
+  const url = `https://api.census.gov/data/timeseries/intltrade/${direction}/naics?get=GEN_VAL_MO,CTY_NAME,NAICS&time=from+2023-01&NAICS=${encodeURIComponent(code)}&key=${encodeURIComponent(key)}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const rows = await r.json();
+  if (!Array.isArray(rows) || rows.length < 2) return { months: [], values: [] };
+  const head = rows[0];
+  const idxVal  = head.indexOf('GEN_VAL_MO');
+  const idxCty  = head.indexOf('CTY_NAME');
+  const idxTime = head.indexOf('time');
+  const byMonth = {};
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][idxCty] !== 'TOTAL FOR ALL COUNTRIES') continue;
+    byMonth[rows[i][idxTime]] = Number(rows[i][idxVal]);
+  }
+  const ms = Object.keys(byMonth).sort();
+  return { months: ms, values: ms.map(m=>byMonth[m]) };
+}
+
+async function ensureNaicsData(code){
+  if (NAICS_DATA[code] && NAICS_DATA[code]._real) return true;
+  const key = (localStorage.getItem('census-key') || '').trim();
+  if (!key) { alert('🇺🇸 Census API 키가 없습니다. 설정 탭에서 먼저 저장해주세요.'); return false; }
+  try {
+    const [imp, exp] = await Promise.all([
+      fetchCensusNaics('imports', code, key),
+      fetchCensusNaics('exports', code, key),
+    ]);
+    if (imp.months.length === 0 && exp.months.length === 0) {
+      alert(`NAICS ${code} — Census 응답 비어있음. 코드를 확인해주세요.`);
+      return false;
+    }
+    NAICS_DATA[code] = {
+      _real: true,
+      title: `🇺🇸 미국 NAICS ${code} 수출입 · 실데이터`,
+      imports: alignToMonths(imp.months, imp.values).map(v=>v==null?0:v),
+      exports: alignToMonths(exp.months, exp.values).map(v=>v==null?0:v),
+    };
+    return true;
+  } catch (e) {
+    alert(`Census NAICS 호출 실패: ${e.message}`);
+    return false;
+  }
+}
+
+async function renderNaics(){
+  const preset = document.getElementById('naicsPreset').value;
+  const inputEl = document.getElementById('naicsInput');
+  let code = preset === '__custom__' ? (inputEl.value.trim() || naicsState.code) : preset;
+  if (!/^\d{2,6}$/.test(code)) { alert('NAICS 코드는 2~6자리로 입력해주세요.'); return; }
+  naicsState.code = code;
+
+  const titleEl = document.getElementById('naicsChartTitle');
+  titleEl.textContent = `NAICS ${code} 실데이터 조회 중...`;
+  const ok = await ensureNaicsData(code);
+  if (!ok) { titleEl.textContent = `NAICS ${code} — 데이터 없음`; return; }
   const data = NAICS_DATA[code];
-  document.getElementById('naicsChartTitle').textContent = data.title;
+  titleEl.textContent = data.title;
 
   destroyChart('naics-main'); destroyChart('naics-balance');
 
@@ -1902,34 +2078,103 @@ function renderNaics(){
     <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">적자 전년비</span><b>${(((last12Imp-last12Exp)-(prev12Imp-prev12Exp))/(prev12Imp-prev12Exp)*100).toFixed(1)}%</b></div>
   `;
 }
-document.getElementById('naicsPreset').addEventListener('change', renderNaics);
+document.getElementById('naicsPreset').addEventListener('change', (e)=>{
+  const inp = document.getElementById('naicsInput');
+  if (e.target.value === '__custom__') { inp.style.display=''; inp.focus(); return; }
+  inp.style.display = 'none';
+  renderNaics();
+});
+document.getElementById('naicsApply').addEventListener('click', renderNaics);
+document.getElementById('naicsInput').addEventListener('keydown', e=>{ if(e.key==='Enter') renderNaics(); });
 
 /* =====================================
-   M3
+   M3  (Census M3 API · 월별 신규주문/재고/출하/수주잔고)
    ===================================== */
-function renderM3(){
-  const key = document.getElementById('m3Preset').value;
-  const s = m3Series(key);
+const M3_REAL = {};  // { category_code: { orders, inv, ship, back, months } }
+let m3State = { code:'MVP' };
+
+async function fetchCensusM3(cat, dataTypeCode, key){
+  const url = `https://api.census.gov/data/timeseries/eits/m3?get=cell_value,time_slot_id&category_code=${encodeURIComponent(cat)}&data_type_code=${dataTypeCode}&seasonally_adj=yes&time=from+2023-01&for=us:*&key=${encodeURIComponent(key)}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status} (${dataTypeCode})`);
+  const rows = await r.json();
+  if (!Array.isArray(rows) || rows.length < 2) return { months:[], values:[] };
+  const head = rows[0];
+  const idxVal  = head.indexOf('cell_value');
+  const idxTime = head.indexOf('time');
+  const byMonth = {};
+  for (let i = 1; i < rows.length; i++) byMonth[rows[i][idxTime]] = Number(rows[i][idxVal]);
+  const ms = Object.keys(byMonth).sort();
+  return { months: ms, values: ms.map(m=>byMonth[m]) };
+}
+
+async function ensureM3Data(cat){
+  if (M3_REAL[cat]) return true;
+  const key = (localStorage.getItem('census-key') || '').trim();
+  if (!key) { alert('🇺🇸 Census API 키가 없습니다. 설정 탭에서 먼저 저장해주세요.'); return false; }
+  try {
+    // NO=신규주문, TI=총재고, VS=출하, UO=미출고 수주잔고
+    const [orders, inv, ship, back] = await Promise.all([
+      fetchCensusM3(cat, 'NO', key),
+      fetchCensusM3(cat, 'TI', key),
+      fetchCensusM3(cat, 'VS', key),
+      fetchCensusM3(cat, 'UO', key),
+    ]);
+    if (orders.months.length === 0 && inv.months.length === 0) {
+      alert(`M3 category_code "${cat}" — 데이터 없음. category 목록을 확인해주세요.`);
+      return false;
+    }
+    M3_REAL[cat] = {
+      orders: alignToMonths(orders.months, orders.values).map(v=>v==null?0:v),
+      inv:    alignToMonths(inv.months, inv.values).map(v=>v==null?0:v),
+      ship:   alignToMonths(ship.months, ship.values).map(v=>v==null?0:v),
+      back:   alignToMonths(back.months, back.values).map(v=>v==null?0:v),
+    };
+    return true;
+  } catch (e) {
+    alert(`Census M3 호출 실패: ${e.message}`);
+    return false;
+  }
+}
+
+async function renderM3(){
+  const preset = document.getElementById('m3Preset').value;
+  const inputEl = document.getElementById('m3Input');
+  let cat = preset === '__custom__' ? (inputEl.value.trim().toUpperCase() || m3State.code) : preset;
+  if (!cat) return;
+  m3State.code = cat;
+
   ['orders','inventory','shipments','backlog'].forEach(x=>destroyChart(`m3-${x}`));
 
+  const ok = await ensureM3Data(cat);
+  if (!ok) return;
+  const s = M3_REAL[cat];
+
   charts['m3-orders'] = new Chart(document.getElementById('chart-m3-orders'),{
-    type:'line', data:{labels:months, datasets:[makeAreaDataset('신규주문', s.orders, '#4F6BED', {fill:true})]},
+    type:'line', data:{labels:months, datasets:[makeAreaDataset(`신규주문 (${cat})`, s.orders, '#4F6BED', {fill:true})]},
     options: baseOptions({extra:{plugins:{legend:{display:false}}}})
   });
   charts['m3-inventory'] = new Chart(document.getElementById('chart-m3-inventory'),{
-    type:'line', data:{labels:months, datasets:[makeAreaDataset('재고', s.inv, '#F5A623', {fill:true})]},
+    type:'line', data:{labels:months, datasets:[makeAreaDataset(`재고 (${cat})`, s.inv, '#F5A623', {fill:true})]},
     options: baseOptions({extra:{plugins:{legend:{display:false}}}})
   });
   charts['m3-shipments'] = new Chart(document.getElementById('chart-m3-shipments'),{
-    type:'line', data:{labels:months, datasets:[makeAreaDataset('출하량', s.ship, '#22C5A7', {fill:true})]},
+    type:'line', data:{labels:months, datasets:[makeAreaDataset(`출하량 (${cat})`, s.ship, '#22C5A7', {fill:true})]},
     options: baseOptions({extra:{plugins:{legend:{display:false}}}})
   });
   charts['m3-backlog'] = new Chart(document.getElementById('chart-m3-backlog'),{
-    type:'line', data:{labels:months, datasets:[makeAreaDataset('수주잔고', s.back, '#A68BF2', {fill:true})]},
+    type:'line', data:{labels:months, datasets:[makeAreaDataset(`수주잔고 (${cat})`, s.back, '#A68BF2', {fill:true})]},
     options: baseOptions({extra:{plugins:{legend:{display:false}}}})
   });
 }
-document.getElementById('m3Preset').addEventListener('change', renderM3);
+document.getElementById('m3Preset').addEventListener('change', (e)=>{
+  const inp = document.getElementById('m3Input');
+  if (e.target.value === '__custom__') { inp.style.display=''; inp.focus(); return; }
+  inp.style.display = 'none';
+  renderM3();
+});
+document.getElementById('m3Apply').addEventListener('click', renderM3);
+document.getElementById('m3Input').addEventListener('keydown', e=>{ if(e.key==='Enter') renderM3(); });
 
 
 /* =====================================
