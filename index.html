@@ -890,11 +890,17 @@ function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>1
 const COLORS = {
   korea:'#4F6BED', china:'#EA5B5B', japan:'#F5A623', taiwan:'#22C5A7',
   malaysia:'#A68BF2', usa:'#5C7CFF', france:'#F78DA7', germany:'#34495E',
-  italy:'#16A085', vietnam:'#E67E22', uk:'#8E44AD'
+  italy:'#16A085', vietnam:'#E67E22', uk:'#8E44AD',
+  mexico:'#D35400', canada:'#C0392B', india:'#F39C12', netherlands:'#2980B9',
+  thailand:'#27AE60', singapore:'#E74C3C', indonesia:'#9B59B6', brazil:'#1ABC9C',
+  australia:'#D68910', philippines:'#7D3C98', others:'#95A5A6'
 };
 const C_NAMES = {
   korea:'한국', china:'중국', japan:'일본', taiwan:'대만', malaysia:'말레이시아',
-  usa:'미국', france:'프랑스', germany:'독일', italy:'이탈리아', vietnam:'베트남', uk:'영국'
+  usa:'미국', france:'프랑스', germany:'독일', italy:'이탈리아', vietnam:'베트남', uk:'영국',
+  mexico:'멕시코', canada:'캐나다', india:'인도', netherlands:'네덜란드',
+  thailand:'태국', singapore:'싱가포르', indonesia:'인도네시아', brazil:'브라질',
+  australia:'호주', philippines:'필리핀', others:'기타'
 };
 
 /* HS code datasets */
@@ -1337,6 +1343,24 @@ let hsState = { period:'monthly', metric:'value', countries:{}, hs:'854232' };
 
 /* ------ 브라우저 직접 호출 (프록시 불필요) ------ */
 const CORS_PROXY = 'https://corsproxy.io/?';
+// Comtrade 전용 프록시 (corsproxy.io 가 자주 빈 응답을 반환 → allorigins 로 이중화)
+const CORS_PROXY_ALT = 'https://api.allorigins.win/raw?url=';
+
+// 공용 프록시 fetch (primary 실패 시 alt 로 재시도)
+async function proxyFetch(targetUrl){
+  try {
+    const r = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
+    if (r.ok) {
+      const t = await r.text();
+      if (t && t.length > 10) return { text: t, ok: true };
+    }
+  } catch(e) {}
+  // Fallback
+  const r2 = await fetch(CORS_PROXY_ALT + encodeURIComponent(targetUrl));
+  if (!r2.ok) throw new Error(`proxy HTTP ${r2.status}`);
+  const t2 = await r2.text();
+  return { text: t2, ok: true };
+}
 
 /* ============================================
    즐겨찾기 (Favorites) — localStorage 기반
@@ -1485,9 +1509,7 @@ async function fetchKcsYearRaw(hs, year, key){
     pageNo: '1',
   });
   const target = `https://apis.data.go.kr/1220000/Itemtrade/getItemtradeList?${params}`;
-  const r = await fetch(CORS_PROXY + encodeURIComponent(target));
-  if (!r.ok) throw new Error(`proxy status ${r.status}`);
-  const xml = await r.text();
+  const { text: xml } = await proxyFetch(target);
   const rcMatch = xml.match(/<resultCode>([^<]+)<\/resultCode>/);
   const rc = rcMatch ? rcMatch[1] : null;
   if (rc !== '00') {
@@ -1497,40 +1519,81 @@ async function fetchKcsYearRaw(hs, year, key){
   return parseKcsXml(xml);
 }
 
+// Census 국가명 → 우리 코드 매핑 (color 팔레트용)
+const CENSUS_CTY_MAP = {
+  'CHINA':'china','JAPAN':'japan','KOREA, SOUTH':'korea','KOREA, REPUBLIC OF':'korea',
+  'TAIWAN':'taiwan','GERMANY':'germany','VIETNAM':'vietnam','MEXICO':'mexico',
+  'CANADA':'canada','INDIA':'india','FRANCE':'france','ITALY':'italy',
+  'NETHERLANDS':'netherlands','UNITED KINGDOM':'uk','MALAYSIA':'malaysia',
+  'THAILAND':'thailand','SINGAPORE':'singapore','INDONESIA':'indonesia',
+  'BRAZIL':'brazil','AUSTRALIA':'australia','PHILIPPINES':'philippines',
+};
+function normCty(name){
+  const clean = name.replace(/,.*$/,'').trim();
+  return CENSUS_CTY_MAP[name] || CENSUS_CTY_MAP[clean] || clean.toLowerCase().replace(/\s+/g,'-');
+}
+
 async function ensureUsHsData(hs){
   if (HS_DATA[hs] && HS_DATA[hs].countries && HS_DATA[hs].countries.real) return true;
+  // Census key 는 선택사항 — 없어도 하루 500 call 한도 내 동작. 있으면 활용.
   const key = (localStorage.getItem('census-key') || '').trim();
-  if (!key) {
-    alert('🇺🇸 Census API 키가 없습니다.\n좌측 메뉴 "설정 / API 키" 에서 먼저 저장해주세요.');
-    return false;
-  }
   const params = new URLSearchParams({
-    get: 'GEN_VAL_MO,CTY_NAME,I_COMMODITY',
+    get: 'GEN_VAL_MO,CTY_NAME',
     time: 'from 2023-01',
     I_COMMODITY: hs,
-    key,
+    CTY_CODE: '*',  // 국가별 breakdown 요청
   });
+  if (key) params.set('key', key);
   const url = `https://api.census.gov/data/timeseries/intltrade/imports/hs?${params}`;
   try {
     const r = await fetch(url);
-    if (!r.ok) { alert(`Census API 오류 (HTTP ${r.status}).\n키 또는 HS 코드(${hs})를 확인해주세요.`); return false; }
+    if (!r.ok) {
+      alert(`Census API 오류 (HTTP ${r.status}).\n• HS 코드(${hs}) 확인\n• 저장된 API 키가 유효하지 않을 수 있음 (설정 탭에서 지우고 재시도)`);
+      return false;
+    }
     const rows = await r.json();
     if (!Array.isArray(rows) || rows.length < 2) { alert(`HS ${hs} — Census 응답 비어있음.`); return false; }
     const head = rows[0];
     const idxVal  = head.indexOf('GEN_VAL_MO');
     const idxCty  = head.indexOf('CTY_NAME');
     const idxTime = head.indexOf('time');
-    const byMonth = {};
+    // 월별 × 국가별 집계 (CTY_CODE=* 이므로 국가별 rows 만 존재, total 은 직접 sum)
+    const byCty = {};      // { ctyCode: { month: val } }
+    const totalByMonth = {};
     for (let i = 1; i < rows.length; i++) {
-      if (rows[i][idxCty] !== 'TOTAL FOR ALL COUNTRIES') continue;
-      byMonth[rows[i][idxTime]] = Number(rows[i][idxVal]);
+      const cty = rows[i][idxCty];
+      const t   = rows[i][idxTime];
+      const v   = Number(rows[i][idxVal]);
+      if (!cty || cty === 'TOTAL FOR ALL COUNTRIES') continue;
+      const cc = normCty(cty);
+      if (!byCty[cc]) byCty[cc] = {};
+      byCty[cc][t] = (byCty[cc][t]||0) + v;
+      totalByMonth[t] = (totalByMonth[t]||0) + v;
     }
-    const ms = Object.keys(byMonth).sort();
+    const ms = Object.keys(totalByMonth).sort();
     if (ms.length === 0) { alert(`HS ${hs} — Census 데이터 없음.`); return false; }
+    // 최근 12개월 합 기준 상위 8개 국가 추림
+    const last12 = ms.slice(-12);
+    const ctySum = Object.entries(byCty).map(([cc, m])=>{
+      const s = last12.reduce((a,t)=>a + (m[t]||0), 0);
+      return [cc, s];
+    }).sort((a,b)=>b[1]-a[1]).slice(0, 8);
+    const countries = {};
+    ctySum.forEach(([cc])=>{
+      countries[cc] = alignToMonths(ms, ms.map(t => byCty[cc][t] || 0));
+    });
+    // 기타(others) = TOTAL - 상위국가합
+    const topCodes = ctySum.map(x=>x[0]);
+    const others = ms.map(t=>{
+      const tot = totalByMonth[t] || 0;
+      const topSum = topCodes.reduce((a,cc)=>a + (byCty[cc]?.[t]||0), 0);
+      return Math.max(0, tot - topSum);
+    });
+    if (others.reduce((a,b)=>a+b,0) > 0) countries['others'] = alignToMonths(ms, others);
     HS_DATA[hs] = {
-      title: `🇺🇸 미국 HS ${hs} 수입 추이 · 실데이터`,
+      title: `🇺🇸 미국 HS ${hs} 수입 추이 · 실데이터 (국가별)`,
       unit: 'USD',
-      countries: { real: alignToMonths(ms, ms.map(m=>byMonth[m])) },
+      countries,
     };
     return true;
   } catch (e) {
@@ -1771,11 +1834,11 @@ let euState = { hs:'3304', period:'monthly', flow:'M' /* M=수입, X=수출 */ }
 // Comtrade는 한 번에 최대 12 period 까지만 허용 → 12개월씩 배치
 async function fetchComtradeBatch(hs, flow, periods){
   const target = `https://comtradeapi.un.org/public/v1/preview/C/M/HS?reporterCode=97&period=${periods.join(',')}&cmdCode=${encodeURIComponent(hs)}&flowCode=${flow}&partnerCode=0`;
-  // UN Comtrade 는 CORS 헤더 미제공 → 브라우저용 CORS 프록시 경유
-  const u = CORS_PROXY + encodeURIComponent(target);
-  const r = await fetch(u);
-  if (!r.ok) throw new Error(`Comtrade HTTP ${r.status}`);
-  const j = await r.json();
+  // UN Comtrade 는 CORS 헤더 미제공 → allorigins 프록시 경유 (corsproxy.io 는 빈 응답 반환 빈도 높음)
+  const { text } = await proxyFetch(target);
+  let j;
+  try { j = JSON.parse(text); }
+  catch(e) { throw new Error(`Comtrade: 응답 파싱 실패 (프록시가 차단되었거나 빈 응답)`); }
   if (j.error) throw new Error(`Comtrade: ${j.error}`);
   return j.data || [];
 }
