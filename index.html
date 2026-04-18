@@ -820,8 +820,9 @@
           <div class="card-title">현재 등록 상태</div>
           <div id="keyStatus" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
           <div style="margin-top:14px;padding:12px;background:var(--surface-alt);border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.6">
-            💡 로컬 프록시(<code>node proxy.js</code>)가 기동 중이면 페이지 로드 시 자동으로 <b>/api/bulk/init</b> 을 호출해 실데이터로 전환됩니다.<br>
-            API 키는 <code>config.json</code> 에 저장되며 브라우저에는 저장되지 않습니다.
+            💡 키를 저장한 뒤 <b>[미국 HS]</b> 또는 <b>[한국 HS]</b> 탭에서 HS 코드를 입력하면 해당 코드의 실데이터를 브라우저가 직접 호출합니다 (별도 서버 불필요).<br>
+            🔒 키는 브라우저 <code>localStorage</code> 에만 저장되며 외부로 전송되지 않습니다.<br>
+            🇰🇷 관세청은 CORS 정책으로 공용 프록시 <code>corsproxy.io</code> 를 경유합니다.
           </div>
         </div>
 
@@ -1325,38 +1326,122 @@ function renderDashboard(){
    ===================================== */
 let hsState = { period:'monthly', metric:'value', countries:{}, hs:'854232' };
 
+/* ------ 브라우저 직접 호출 (프록시 불필요) ------ */
+const CORS_PROXY = 'https://corsproxy.io/?';
+
+function parseKcsXml(xml){
+  const items = [];
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  let m;
+  while ((m = itemRegex.exec(xml)) !== null) {
+    const obj = {};
+    const fieldRegex = /<(\w+)>([^<]*)<\/\1>/g;
+    let f;
+    while ((f = fieldRegex.exec(m[1])) !== null) obj[f[1]] = f[2].trim();
+    items.push(obj);
+  }
+  return items;
+}
+
+async function fetchKcsYearRaw(hs, year, key){
+  const params = new URLSearchParams({
+    serviceKey: key,
+    strtYymm: `${year}01`,
+    endYymm:  `${year}12`,
+    hsSgn: hs,
+    numOfRows: '1000',
+    pageNo: '1',
+  });
+  const target = `https://apis.data.go.kr/1220000/Itemtrade/getItemtradeList?${params}`;
+  const r = await fetch(CORS_PROXY + encodeURIComponent(target));
+  if (!r.ok) throw new Error(`proxy status ${r.status}`);
+  const xml = await r.text();
+  const rcMatch = xml.match(/<resultCode>([^<]+)<\/resultCode>/);
+  const rc = rcMatch ? rcMatch[1] : null;
+  if (rc !== '00') {
+    const msgMatch = xml.match(/<resultMsg>([^<]+)<\/resultMsg>/);
+    throw new Error(`관세청 응답 resultCode=${rc} ${msgMatch?('· '+msgMatch[1]):''}`);
+  }
+  return parseKcsXml(xml);
+}
+
 async function ensureUsHsData(hs){
-  if (HS_DATA[hs]) return true;
+  if (HS_DATA[hs] && HS_DATA[hs].countries && HS_DATA[hs].countries.real) return true;
+  const key = (localStorage.getItem('census-key') || '').trim();
+  if (!key) {
+    alert('🇺🇸 Census API 키가 없습니다.\n좌측 메뉴 "설정 / API 키" 에서 먼저 저장해주세요.');
+    return false;
+  }
+  const params = new URLSearchParams({
+    get: 'GEN_VAL_MO,CTY_NAME,I_COMMODITY',
+    time: 'from 2023-01',
+    I_COMMODITY: hs,
+    key,
+  });
+  const url = `https://api.census.gov/data/timeseries/intltrade/imports/hs?${params}`;
   try {
-    const r = await fetch(`/api/census/imports?hs=${encodeURIComponent(hs)}&fromYear=2023`);
-    if (!r.ok) return false;
-    const d = await r.json();
-    if (!d.months || d.months.length === 0) return false;
+    const r = await fetch(url);
+    if (!r.ok) { alert(`Census API 오류 (HTTP ${r.status}).\n키 또는 HS 코드(${hs})를 확인해주세요.`); return false; }
+    const rows = await r.json();
+    if (!Array.isArray(rows) || rows.length < 2) { alert(`HS ${hs} — Census 응답 비어있음.`); return false; }
+    const head = rows[0];
+    const idxVal  = head.indexOf('GEN_VAL_MO');
+    const idxCty  = head.indexOf('CTY_NAME');
+    const idxTime = head.indexOf('time');
+    const byMonth = {};
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][idxCty] !== 'TOTAL FOR ALL COUNTRIES') continue;
+      byMonth[rows[i][idxTime]] = Number(rows[i][idxVal]);
+    }
+    const ms = Object.keys(byMonth).sort();
+    if (ms.length === 0) { alert(`HS ${hs} — Census 데이터 없음.`); return false; }
     HS_DATA[hs] = {
       title: `🇺🇸 미국 HS ${hs} 수입 추이 · 실데이터`,
       unit: 'USD',
-      countries: { real: alignToMonths(d.months, d.values) },
+      countries: { real: alignToMonths(ms, ms.map(m=>byMonth[m])) },
     };
     return true;
-  } catch (e) { return false; }
+  } catch (e) {
+    alert(`Census API 호출 실패: ${e.message}`);
+    return false;
+  }
 }
 
 async function ensureKrHsData(hs){
-  if (KR_HS_DATA[hs]) return true;
+  if (KR_HS_DATA[hs] && KR_HS_DATA[hs].exports && KR_HS_DATA[hs].exports.real) return true;
+  const key = (localStorage.getItem('kcs-key') || '').trim();
+  if (!key) {
+    alert('🇰🇷 관세청 API 키가 없습니다.\n좌측 메뉴 "설정 / API 키" 에서 먼저 저장해주세요.');
+    return false;
+  }
+  const toYear = new Date().getFullYear();
+  const fromYear = 2023;
+  const byMonth = {};
   try {
-    const y = new Date().getFullYear();
-    const r = await fetch(`/api/kcs/item?hsSgn=${encodeURIComponent(hs)}&fromYear=2023&toYear=${y}`);
-    if (!r.ok) return false;
-    const d = await r.json();
-    if (!d.months || d.months.length === 0) return false;
-    KR_HS_DATA[hs] = {
-      title: `🇰🇷 한국 HS ${hs} 수출입 · 실데이터`,
-      unit: 'USD',
-      exports: { real: alignToMonths(d.months, d.exp) },
-      imports: { real: alignToMonths(d.months, d.imp) },
-    };
-    return true;
-  } catch (e) { return false; }
+    for (let y = fromYear; y <= toYear; y++) {
+      const items = await fetchKcsYearRaw(hs, y, key);
+      for (const it of items) {
+        const raw = it.year || '';
+        if (!/^\d{4}\.\d{2}$/.test(raw)) continue;
+        const ym = raw.replace('.', '-');
+        if (!byMonth[ym]) byMonth[ym] = { exp: 0, imp: 0 };
+        byMonth[ym].exp += Number(it.expDlr || 0);
+        byMonth[ym].imp += Number(it.impDlr || 0);
+      }
+    }
+  } catch (e) {
+    alert(`관세청 API 호출 실패: ${e.message}\n(CORS 프록시/키/HS 코드 확인 후 재시도)`);
+    return false;
+  }
+  const ms = Object.keys(byMonth).sort();
+  if (ms.length === 0) { alert(`HS ${hs} — 관세청 수출입 기록 없음.`); return false; }
+  KR_HS_DATA[hs] = {
+    title: `🇰🇷 한국 HS ${hs} 수출입 · 실데이터`,
+    unit: 'USD',
+    exports: { real: alignToMonths(ms, ms.map(m=>byMonth[m].exp)) },
+    imports: { real: alignToMonths(ms, ms.map(m=>byMonth[m].imp)) },
+  };
+  return true;
 }
 
 async function renderHsUS(){
@@ -1484,13 +1569,16 @@ function renderHsTable(data){
   tbl.querySelector('thead').innerHTML = headHtml;
   let bodyHtml = '';
   const startIdx = months.length - 12;
-  rows12.forEach((m,i)=>{
+  // 최신이 위로 오도록 내림차순 렌더
+  for (let k = rows12.length - 1; k >= 0; k--) {
+    const m = rows12[k];
     bodyHtml += `<tr><td>${m}</td>`;
     countries.forEach(c=>{
-      bodyHtml += `<td class="num">${data.countries[c][startIdx+i].toLocaleString()}</td>`;
+      const v = data.countries[c][startIdx+k];
+      bodyHtml += `<td class="num">${v==null?'-':v.toLocaleString()}</td>`;
     });
     bodyHtml += '</tr>';
-  });
+  }
   tbl.querySelector('tbody').innerHTML = bodyHtml;
 }
 
@@ -1709,22 +1797,25 @@ async function renderHsKR(){
     options:{...baseOptions(), plugins:{...baseOptions().plugins, legend:{display:false}}}
   });
 
-  // Table
+  // Table (최신이 위로 오도록 내림차순)
   const tbl = document.getElementById('krTable');
   const activeCountries = Object.keys(countries).filter(c=>krState.countries[`${hs}:${krState.flow}:${c}`]);
   const displayCountries = krState.flow==='balance' ? Object.keys(data.exports) : activeCountries;
   const headHtml = `<tr><th>기간</th>${displayCountries.map(c=>`<th class="num">${C_NAMES[c]||c}</th>`).join('')}</tr>`;
   tbl.querySelector('thead').innerHTML = headHtml;
   const startIdx = months.length - 12;
+  const rows12 = months.slice(-12);
   let bodyHtml = '';
-  months.slice(-12).forEach((m,i)=>{
+  for (let k = rows12.length - 1; k >= 0; k--) {
+    const m = rows12[k];
     bodyHtml += `<tr><td>${m}</td>`;
     displayCountries.forEach(c=>{
       const src = (krState.flow==='imports'?data.imports:data.exports)[c];
-      bodyHtml += `<td class="num">${src?src[startIdx+i].toLocaleString():'-'}</td>`;
+      const v = src ? src[startIdx+k] : null;
+      bodyHtml += `<td class="num">${v==null?'-':v.toLocaleString()}</td>`;
     });
     bodyHtml += '</tr>';
-  });
+  }
   tbl.querySelector('tbody').innerHTML = bodyHtml;
 }
 document.getElementById('krHsPreset').addEventListener('change', (e)=>{
@@ -1854,8 +1945,9 @@ function saveKey(storageKey, inputId, friendly){
   const v = el ? el.value.trim() : '';
   if(!v){ alert('키를 입력해주세요.'); return; }
   localStorage.setItem(storageKey, v);
-  alert(`${friendly} API 키 저장됨.\n샘플 모드 → 실데이터 모드 자동 전환됩니다.`);
+  alert(`${friendly} API 키 저장됨.\n이제 HS 코드 입력 시 실데이터가 조회됩니다.`);
   renderSettings();
+  loadLiveData();   // 배너 상태 갱신
 }
 document.getElementById('saveKcsKey').addEventListener('click', ()=>saveKey('kcs-key','kcsKey','관세청'));
 document.getElementById('saveCensusKey').addEventListener('click', ()=>saveKey('census-key','censusKey','Census'));
@@ -1863,11 +1955,46 @@ document.getElementById('saveCensusKey').addEventListener('click', ()=>saveKey('
 document.getElementById('testEurostat').addEventListener('click', ()=>{
   alert('Eurostat 연결 테스트 (샘플):\n키 불필요. 실운영 시 바로 연결됩니다.\n엔드포인트 예:\nhttps://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/DS-059668');
 });
-document.getElementById('testKcsKey').addEventListener('click', ()=>{
-  const v = localStorage.getItem('kcs-key');
+document.getElementById('testKcsKey').addEventListener('click', async ()=>{
+  const v = (localStorage.getItem('kcs-key') || '').trim();
   if(!v){ alert('관세청 키가 저장되어 있지 않습니다. 먼저 키를 저장해주세요.'); return; }
-  alert(`관세청 연결 테스트 (샘플):\n키 ${v.slice(0,6)}... 로 테스트 요청 송신됩니다.\n실운영 전환 시 실제 API 호출로 대체.`);
+  const btn = document.getElementById('testKcsKey');
+  btn.disabled = true; const prev = btn.textContent; btn.textContent = '테스트 중...';
+  try {
+    const items = await fetchKcsYearRaw('854232', new Date().getFullYear(), v);
+    alert(`✓ 관세청 연결 성공\nHS 854232 / ${new Date().getFullYear()}년 — ${items.length}건 수신.\n(corsproxy.io 경유)`);
+  } catch(e) {
+    alert(`✗ 관세청 연결 실패\n${e.message}`);
+  } finally {
+    btn.disabled = false; btn.textContent = prev;
+  }
 });
+// Census 연결 테스트 버튼 동적 추가
+(function addCensusTest(){
+  const saveBtn = document.getElementById('saveCensusKey');
+  if (!saveBtn) return;
+  const test = document.createElement('button');
+  test.className = 'btn ghost';
+  test.id = 'testCensusKey';
+  test.textContent = '연결 테스트';
+  saveBtn.parentElement.insertBefore(test, saveBtn.nextSibling);
+  test.addEventListener('click', async ()=>{
+    const v = (localStorage.getItem('census-key') || '').trim();
+    if(!v){ alert('Census 키가 저장되어 있지 않습니다. 먼저 키를 저장해주세요.'); return; }
+    test.disabled = true; const prev = test.textContent; test.textContent = '테스트 중...';
+    try {
+      const url = `https://api.census.gov/data/timeseries/intltrade/imports/hs?get=GEN_VAL_MO,CTY_NAME&time=2024-12&I_COMMODITY=854232&key=${encodeURIComponent(v)}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const rows = await r.json();
+      alert(`✓ Census 연결 성공\nHS 854232 / 2024-12 — ${rows.length - 1}행 수신.`);
+    } catch(e) {
+      alert(`✗ Census 연결 실패\n${e.message}`);
+    } finally {
+      test.disabled = false; test.textContent = prev;
+    }
+  });
+})();
 
 function renderSettings(){
   // restore input values
@@ -1904,74 +2031,28 @@ function alignToMonths(srcMonths, srcValues){
   return months.map(m => (map[m] != null ? map[m] : null));
 }
 
-async function loadLiveData(){
-  let banner = document.getElementById('liveBanner');
+function loadLiveData(){
+  // 브라우저 직접 호출 모드: 키 등록 여부만 확인해 배너 업데이트
+  COLORS.real = '#0052CC';
+  C_NAMES.real = '전체 (실데이터)';
+  const banner = document.getElementById('liveBanner');
   if (!banner) return;
-  try {
-    banner.textContent = '⏳ 실데이터 로딩 중... (최초 15~30초, 이후 6시간 캐시)';
-    const r = await fetch('/api/bulk/init');
-    if (!r.ok) throw new Error('proxy not ready');
-    const d = await r.json();
-
-    // 관세청(KR) 실데이터를 KR_HS_DATA 에 주입
-    Object.keys(d.kr.hs).forEach(hs => {
-      const src = d.kr.hs[hs];
-      if (!src.months || src.months.length === 0) return;
-      if (!KR_HS_DATA[hs]) {
-        KR_HS_DATA[hs] = {
-          title: `🇰🇷 한국 ${src.label} 수출입 (HS ${hs}) · 실데이터`,
-          unit: 'USD',
-          exports: {}, imports: {}
-        };
-      } else {
-        KR_HS_DATA[hs].title = KR_HS_DATA[hs].title + ' · 실데이터';
-        KR_HS_DATA[hs].unit = 'USD';
-      }
-      // 원 샘플 country keys 는 삭제, 실데이터 총합만 표시
-      const alignedExp = alignToMonths(src.months, src.exp);
-      const alignedImp = alignToMonths(src.months, src.imp);
-      KR_HS_DATA[hs].exports = { real: alignedExp };
-      KR_HS_DATA[hs].imports = { real: alignedImp };
-      const parent = hs.slice(0, 4);
-      if (parent !== hs && KR_HS_DATA[parent]) {
-        KR_HS_DATA[parent].exports = { real: alignedExp };
-        KR_HS_DATA[parent].imports = { real: alignedImp };
-      }
-    });
-
-    // Census(US) 실데이터를 HS_DATA 에 주입
-    Object.keys(d.us.hs).forEach(hs => {
-      const src = d.us.hs[hs];
-      if (!src.months || src.months.length === 0) return;
-      if (!HS_DATA[hs]) {
-        HS_DATA[hs] = { title: `🇺🇸 미국 ${src.label} 수입 (HS ${hs}) · 실데이터`, unit: 'USD', countries: {} };
-      } else {
-        HS_DATA[hs].title = HS_DATA[hs].title + ' · 실데이터';
-        HS_DATA[hs].unit = 'USD';
-      }
-      const aligned = alignToMonths(src.months, src.values);
-      HS_DATA[hs].countries = { real: aligned };
-      // 4자리 상위 HS 코드에도 주입해서 대시보드/다른 뷰가 참조할 수 있게
-      const parent = hs.slice(0, 4);
-      if (parent !== hs && HS_DATA[parent]) HS_DATA[parent].countries = { real: aligned };
-    });
-
-    // 색상/국가명 매핑에 'real' 추가
-    COLORS.real = '#0052CC';
-    C_NAMES.real = '전체 (실데이터)';
-
-    const gen = new Date(d.generated_at).toLocaleString('ko-KR');
-    banner.textContent = `✓ 실데이터 연결됨 (관세청 + Census) · 갱신: ${gen}${d.cached?' · 캐시':''}`;
-    banner.style.background = 'var(--surface-alt)';
+  const hasCensus = !!localStorage.getItem('census-key');
+  const hasKcs    = !!localStorage.getItem('kcs-key');
+  if (hasCensus || hasKcs) {
+    const parts = [];
+    if (hasCensus) parts.push('🇺🇸 Census');
+    if (hasKcs)    parts.push('🇰🇷 관세청');
+    banner.innerHTML = `✓ API 키 등록됨 (${parts.join(' + ')}) · <b>미국 HS</b> / <b>한국 HS</b> 탭에서 HS 코드 입력 시 실데이터 자동 호출`;
     banner.style.color = 'var(--accent)';
-
-    // 현재 활성 뷰 재렌더
-    const active = document.querySelector('.nav-item.active')?.dataset?.view || 'dashboard';
-    const renderers = {'dashboard':renderDashboard,'hscode-us':renderHsUS,'hscode-kr':renderHsKR};
-    if (renderers[active]) renderers[active]();
-  } catch (err) {
-    banner.textContent = `⚠ 실데이터 로드 실패 — 샘플 모드로 작동 중 (${err.message})`;
-    banner.style.color = 'var(--text-muted)';
+  } else {
+    banner.innerHTML = '⚠ 실데이터 연결 전 — <a href="#" id="goSettings" style="color:var(--accent);text-decoration:underline">설정 / API 키</a> 에서 Census · 관세청 키를 저장하세요.';
+    const go = document.getElementById('goSettings');
+    if (go) go.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const navBtn = document.querySelector('.nav-item[data-view="settings"]');
+      if (navBtn) navBtn.click();
+    });
   }
 }
 
