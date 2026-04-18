@@ -452,12 +452,12 @@
           </div>
         </div>
         <div class="hs-search">
-          <input type="text" id="hsInput" placeholder="HS코드 입력 (예: 854232)" value="854232">
+          <input type="text" id="hsInput" placeholder="HS코드 4~10자리 입력 (예: 271019)" value="854232">
           <select class="control" id="hsPreset">
             <option value="854232">854232 · 메모리 반도체</option>
-            <option value="3304">3304 · 화장품</option>
+            <option value="330499">330499 · 스킨케어</option>
             <option value="870380">870380 · 전기자동차</option>
-            <option value="8504">8504 · 변압기</option>
+            <option value="850423">850423 · 대형 변압기</option>
             <option value="190230">190230 · 인스턴트 라면</option>
           </select>
           <div class="seg" data-group="hs-period">
@@ -584,11 +584,14 @@
         <div class="hs-search">
           <select class="control" id="krHsPreset">
             <option value="854232">854232 · 메모리 반도체</option>
-            <option value="3304">3304 · 화장품</option>
+            <option value="330499">330499 · 스킨케어</option>
             <option value="870380">870380 · 전기자동차</option>
-            <option value="8504">8504 · 변압기</option>
+            <option value="850423">850423 · 대형 변압기</option>
             <option value="190230">190230 · 인스턴트 라면</option>
+            <option value="__custom__">▶ 직접 입력 (4~10자리)</option>
           </select>
+          <input class="control" type="text" id="krHsInput" placeholder="HS 코드 입력 예: 271012" style="max-width:200px">
+          <button class="btn" id="krHsApply">적용</button>
           <div class="seg" data-group="kr-flow">
             <button class="active" data-val="exports">수출</button>
             <button data-val="imports">수입</button>
@@ -1322,12 +1325,52 @@ function renderDashboard(){
    ===================================== */
 let hsState = { period:'monthly', metric:'value', countries:{}, hs:'854232' };
 
-function renderHsUS(){
+async function ensureUsHsData(hs){
+  if (HS_DATA[hs]) return true;
+  try {
+    const r = await fetch(`/api/census/imports?hs=${encodeURIComponent(hs)}&fromYear=2023`);
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (!d.months || d.months.length === 0) return false;
+    HS_DATA[hs] = {
+      title: `🇺🇸 미국 HS ${hs} 수입 추이 · 실데이터`,
+      unit: 'USD',
+      countries: { real: alignToMonths(d.months, d.values) },
+    };
+    return true;
+  } catch (e) { return false; }
+}
+
+async function ensureKrHsData(hs){
+  if (KR_HS_DATA[hs]) return true;
+  try {
+    const y = new Date().getFullYear();
+    const r = await fetch(`/api/kcs/item?hsSgn=${encodeURIComponent(hs)}&fromYear=2023&toYear=${y}`);
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (!d.months || d.months.length === 0) return false;
+    KR_HS_DATA[hs] = {
+      title: `🇰🇷 한국 HS ${hs} 수출입 · 실데이터`,
+      unit: 'USD',
+      exports: { real: alignToMonths(d.months, d.exp) },
+      imports: { real: alignToMonths(d.months, d.imp) },
+    };
+    return true;
+  } catch (e) { return false; }
+}
+
+async function renderHsUS(){
   const hsCode = document.getElementById('hsInput').value.trim();
   if(!HS_DATA[hsCode]){
-    alert(`HS ${hsCode} 샘플 데이터 없음. 프리셋에서 선택해주세요.`);
-    document.getElementById('hsInput').value = hsState.hs;
-    return;
+    // 프록시에서 실데이터 on-demand 로드 시도
+    const el = document.getElementById('hsChartTitle');
+    if (el) el.textContent = `HS ${hsCode} 실데이터 조회 중...`;
+    const ok = await ensureUsHsData(hsCode);
+    if (!ok) {
+      alert(`HS ${hsCode} — 데이터 없음.\n\n• Census API에 해당 HS 코드가 없거나\n• 로컬 프록시(node proxy.js)가 꺼져 있을 수 있습니다.`);
+      document.getElementById('hsInput').value = hsState.hs;
+      return;
+    }
   }
   hsState.hs = hsCode;
 
@@ -1553,8 +1596,24 @@ document.querySelectorAll('[data-group="eu-period"] button').forEach(b=>{
    ===================================== */
 let krState = { hs:'854232', flow:'exports', period:'monthly', countries:{} };
 
-function renderHsKR(){
-  const hs = document.getElementById('krHsPreset').value;
+async function renderHsKR(){
+  // preset 선택 + custom 입력 모두 지원
+  const preset = document.getElementById('krHsPreset').value;
+  const inputEl = document.getElementById('krHsInput');
+  let hs = preset === '__custom__' ? (inputEl.value.trim() || krState.hs) : preset;
+  if (!/^\d{4,10}$/.test(hs)) {
+    alert('HS 코드는 4~10자리 숫자로 입력해주세요.');
+    return;
+  }
+  if (!KR_HS_DATA[hs]) {
+    const el = document.getElementById('krChartTitle');
+    if (el) el.textContent = `HS ${hs} 실데이터 조회 중...`;
+    const ok = await ensureKrHsData(hs);
+    if (!ok) {
+      alert(`HS ${hs} — 관세청 데이터 없음.\n\n• 로컬 프록시(node proxy.js)가 꺼져 있거나\n• 해당 HS에 수출입 기록이 없을 수 있습니다.`);
+      return;
+    }
+  }
   krState.hs = hs;
   const data = KR_HS_DATA[hs];
   if(!data) return;
@@ -1668,7 +1727,21 @@ function renderHsKR(){
   });
   tbl.querySelector('tbody').innerHTML = bodyHtml;
 }
-document.getElementById('krHsPreset').addEventListener('change', ()=>{ krState.countries={}; renderHsKR(); });
+document.getElementById('krHsPreset').addEventListener('change', (e)=>{
+  const inp = document.getElementById('krHsInput');
+  if (e.target.value === '__custom__') {
+    inp.style.display = '';
+    inp.focus();
+    return;
+  }
+  inp.style.display = 'none';
+  krState.countries={};
+  renderHsKR();
+});
+document.getElementById('krHsApply').addEventListener('click', ()=>{ krState.countries={}; renderHsKR(); });
+document.getElementById('krHsInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ krState.countries={}; renderHsKR(); }});
+// 초기에는 input 숨김
+document.getElementById('krHsInput').style.display = 'none';
 document.querySelectorAll('[data-group="kr-flow"] button').forEach(b=>{
   b.addEventListener('click', ()=>{
     b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
