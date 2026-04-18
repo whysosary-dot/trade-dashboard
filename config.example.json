@@ -1,0 +1,17 @@
+{
+  "keys": {
+    "kcs": "공공데이터포털_관세청_Decoding_Key_입력",
+    "census": "Census_Bureau_API_Key_입력",
+    "dart": "DART_API_Key_입력"
+  },
+  "endpoints": {
+    "kcsItem": "https://apis.data.go.kr/1220000/nvlgXprtImpTradStatsGWService/getNvlgXprtImpTradStatsGWList",
+    "kcsCountry": "https://apis.data.go.kr/1220000/nvlgSttrCntyXprtImpTradStatsGWService/getNvlgSttrCntyXprtImpTradStatsGWList",
+    "kcsItemFallback": "https://apis.data.go.kr/1220000/Itemtrade/getItemtradeList",
+    "kcsCountryFallback": "https://apis.data.go.kr/1220000/Ctytrade/getCtytradeList",
+    "census": "https://api.census.gov/data/timeseries/intltrade/imports/hs",
+    "dart": "https://opendart.fss.or.kr/api/list.json"
+  },
+  "port": 8787,
+  "comment": "이 파일을 config.json 으로 복사한 뒤 키를 채워 넣으세요. config.json은 .gitignore 에 포함되어 있습니다."
+}

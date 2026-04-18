@@ -1,0 +1,23 @@
+# Sensitive - API keys
+config.json
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Node
+node_modules/
+
+# Cache
+.cache/

@@ -1,0 +1,2168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Trade Lens · 글로벌 무역 데이터 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg: #F7F8FB;
+    --surface: #FFFFFF;
+    --surface-alt: #F1F3F8;
+    --border: #E5E8F0;
+    --text: #1C2434;
+    --text-muted: #6B7489;
+    --text-soft: #8E96AA;
+    --primary: #4F6BED;
+    --primary-soft: #EEF1FE;
+    --accent: #22C5A7;
+    --warn: #F5A623;
+    --danger: #EA5B5B;
+    --korea: #4F6BED;
+    --china: #EA5B5B;
+    --japan: #F5A623;
+    --taiwan: #22C5A7;
+    --malaysia: #A68BF2;
+    --usa: #5C7CFF;
+    --france: #F78DA7;
+    --germany: #34495E;
+    --shadow-sm: 0 1px 2px rgba(15, 22, 41, 0.04);
+    --shadow-md: 0 4px 16px rgba(15, 22, 41, 0.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  [data-theme="dark"]{
+    --bg: #0E1220;
+    --surface: #171C2E;
+    --surface-alt: #1F2540;
+    --border: #2A3050;
+    --text: #E8ECF6;
+    --text-muted: #9BA3BC;
+    --text-soft: #6F7795;
+    --primary: #7A92FF;
+    --primary-soft: #1F2750;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 6px 24px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    background:var(--bg); color:var(--text);
+    font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none}
+  input,select{font-family:inherit}
+  a{color:inherit;text-decoration:none}
+
+  /* Layout */
+  .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+  .sidebar{
+    background:var(--surface);
+    border-right:1px solid var(--border);
+    padding:18px 14px;
+    display:flex;flex-direction:column;gap:4px;
+    position:sticky;top:0;height:100vh;overflow-y:auto;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:8px 10px 18px 10px;}
+  .brand-mark{
+    width:32px;height:32px;border-radius:9px;
+    background:linear-gradient(135deg, #4F6BED 0%, #22C5A7 100%);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;
+    box-shadow:0 2px 8px rgba(79,107,237,0.35);
+  }
+  .brand-name{font-weight:700;font-size:15px;letter-spacing:-0.2px}
+  .brand-sub{font-size:11px;color:var(--text-muted)}
+  .nav-section{
+    font-size:10.5px;text-transform:uppercase;letter-spacing:0.8px;
+    color:var(--text-soft);padding:14px 12px 6px 12px;font-weight:600;
+  }
+  .nav-item{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 12px;border-radius:9px;
+    color:var(--text-muted);font-size:13.5px;font-weight:500;
+    transition:all 0.15s;
+  }
+  .nav-item:hover{background:var(--surface-alt);color:var(--text)}
+  .nav-item.active{background:var(--primary-soft);color:var(--primary);font-weight:600}
+  .nav-item .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0.7}
+  .sidebar-footer{margin-top:auto;padding:12px;font-size:11px;color:var(--text-soft);border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .theme-toggle{
+    width:36px;height:20px;background:var(--surface-alt);border-radius:20px;position:relative;
+    border:1px solid var(--border);
+  }
+  .theme-toggle::after{
+    content:'';position:absolute;top:1px;left:1px;width:16px;height:16px;
+    background:var(--primary);border-radius:50%;transition:all 0.2s;
+  }
+  [data-theme="dark"] .theme-toggle::after{left:17px;background:var(--accent)}
+
+  /* Main content */
+  .main{padding:24px 32px 48px 32px;max-width:1400px}
+  .page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+  .page-title{font-size:22px;font-weight:700;letter-spacing:-0.4px}
+  .page-subtitle{font-size:13px;color:var(--text-muted);margin-top:4px}
+  .pill-row{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:5px 11px;font-size:11.5px;font-weight:500;
+    border-radius:20px;background:var(--primary-soft);color:var(--primary);
+  }
+  .pill.success{background:rgba(34,197,167,0.12);color:var(--accent)}
+  .pill.warn{background:rgba(245,166,35,0.12);color:var(--warn)}
+  .pill.neutral{background:var(--surface-alt);color:var(--text-muted)}
+
+  /* Cards */
+  .card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:20px;
+    box-shadow:var(--shadow-sm);
+  }
+  .card-title{font-size:14.5px;font-weight:700;margin-bottom:4px}
+  .card-sub{font-size:12px;color:var(--text-muted);margin-bottom:16px}
+  .card-header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .card-header-row .card-title{margin-bottom:2px}
+
+  /* Grid */
+  .grid{display:grid;gap:16px}
+  .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .col-span-2{grid-column:span 2}
+  @media (max-width:1100px){
+    .grid-4{grid-template-columns:repeat(2,1fr)}
+    .grid-3{grid-template-columns:repeat(2,1fr)}
+    .col-span-2{grid-column:span 1}
+  }
+
+  /* KPI cards */
+  .kpi{display:flex;flex-direction:column;gap:6px;padding:18px 20px}
+  .kpi-label{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+  .kpi-value{font-size:24px;font-weight:700;letter-spacing:-0.5px}
+  .kpi-delta{font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+  .up{color:var(--accent)}
+  .down{color:var(--danger)}
+
+  /* Controls */
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .control{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 12px;font-size:12.5px;
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    color:var(--text);
+  }
+  .control:hover{background:var(--surface-alt)}
+  select.control{padding-right:28px;appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%236B7489' d='M5 6L0 0h10z'/></svg>");
+    background-repeat:no-repeat;background-position:right 10px center;
+  }
+  [data-theme="dark"] select.control{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%239BA3BC' d='M5 6L0 0h10z'/></svg>")}
+  .seg{display:inline-flex;background:var(--surface-alt);border-radius:8px;padding:3px;border:1px solid var(--border)}
+  .seg button{padding:6px 14px;font-size:12px;border-radius:6px;color:var(--text-muted);font-weight:500}
+  .seg button.active{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm);font-weight:600}
+
+  /* Chart container */
+  .chart-wrap{position:relative;width:100%;height:320px}
+  .chart-wrap.small{height:220px}
+  .chart-wrap.tall{height:380px}
+
+  /* Table */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+  th{font-weight:600;color:var(--text-muted);font-size:11.5px;text-transform:uppercase;letter-spacing:0.4px;background:var(--surface-alt)}
+  tbody tr:hover{background:var(--surface-alt)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:"SF Mono", Menlo, Consolas, monospace;}
+
+  /* Chip legend */
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-muted)}
+  .legend-item{display:inline-flex;align-items:center;gap:6px}
+  .legend-dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+  /* Views */
+  .view{display:none}
+  .view.active{display:block}
+
+  /* HS Search */
+  .hs-search{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px}
+  .hs-search input{
+    padding:9px 12px;font-size:13px;
+    background:var(--surface);color:var(--text);
+    border:1px solid var(--border);border-radius:8px;min-width:220px;
+  }
+  .hs-search input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,107,237,0.12)}
+  .btn{
+    padding:9px 14px;font-size:13px;font-weight:600;
+    background:var(--primary);color:#fff;border-radius:8px;
+    transition:all 0.15s;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .btn.ghost:hover{background:var(--surface-alt)}
+
+  .country-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 10px;font-size:12px;border-radius:20px;
+    background:var(--surface-alt);border:1px solid var(--border);
+    color:var(--text-muted);cursor:pointer;font-weight:500;
+  }
+  .country-chip.on{background:var(--primary-soft);color:var(--primary);border-color:transparent}
+  .country-chip::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--country-color, #888)}
+
+  /* Company card */
+  .company-card{
+    padding:14px 16px;border-radius:10px;
+    border:1px solid var(--border);background:var(--surface-alt);
+    display:flex;align-items:center;gap:12px;cursor:pointer;
+    transition:all 0.15s;
+  }
+  .company-card:hover{border-color:var(--primary);background:var(--primary-soft)}
+  .company-card.selected{border-color:var(--primary);background:var(--primary-soft)}
+  .company-logo{
+    width:36px;height:36px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:13px;color:#fff;
+  }
+  .company-name{font-weight:600;font-size:13px}
+  .company-ticker{font-size:11px;color:var(--text-muted)}
+
+  /* Info banner */
+  .info-banner{
+    padding:12px 16px;background:var(--primary-soft);color:var(--primary);
+    border-radius:10px;font-size:12.5px;display:flex;gap:10px;align-items:center;
+    border:1px solid rgba(79,107,237,0.15);margin-bottom:16px;
+  }
+  .info-icon{
+    width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;
+  }
+
+  /* Loading */
+  .skeleton{
+    display:inline-block;background:linear-gradient(90deg,var(--surface-alt),var(--border),var(--surface-alt));
+    background-size:200% 100%;animation:shine 1.2s infinite;border-radius:4px;
+  }
+  @keyframes shine{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+  /* Tag */
+  .tag{
+    display:inline-block;padding:2px 8px;border-radius:4px;
+    font-size:11px;font-weight:600;background:var(--surface-alt);color:var(--text-muted);
+    font-variant-numeric:tabular-nums;
+  }
+  .tag.korea{background:rgba(79,107,237,0.12);color:#4F6BED}
+  .tag.china{background:rgba(234,91,91,0.12);color:#EA5B5B}
+  .tag.japan{background:rgba(245,166,35,0.12);color:#F5A623}
+  .tag.taiwan{background:rgba(34,197,167,0.12);color:#22C5A7}
+
+  /* Step list for settings */
+  .step-list{list-style:none;counter-reset:step;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+  .step-list li{counter-increment:step;position:relative;padding:10px 12px 10px 40px;background:var(--surface-alt);border-radius:8px;font-size:12.5px;line-height:1.6}
+  .step-list li::before{
+    content:counter(step);position:absolute;left:10px;top:10px;
+    width:22px;height:22px;border-radius:50%;
+    background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700;
+  }
+  .step-list .muted{color:var(--text-muted);font-size:11.5px}
+
+  /* Status row */
+  .status-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;border-radius:8px;
+    background:var(--surface-alt);font-size:12.5px;
+  }
+  .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px;background:var(--text-soft)}
+  .status-dot.on{background:var(--accent)}
+  .status-dot.off{background:var(--danger)}
+
+  /* Responsive */
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:fixed;left:-260px;z-index:100;transition:left 0.2s}
+    .sidebar.open{left:0}
+    .main{padding:16px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">T</div>
+      <div>
+        <div class="brand-name">TradeLens</div>
+        <div class="brand-sub">글로벌 무역 데이터</div>
+      </div>
+    </div>
+
+    <a class="nav-item active" data-view="dashboard">
+      <span class="dot"></span>대시보드
+    </a>
+
+    <div class="nav-section">수출입 데이터</div>
+    <a class="nav-item" data-view="hscode-us">
+      <span class="dot"></span>미국 HS코드 수입
+    </a>
+    <a class="nav-item" data-view="hscode-eu">
+      <span class="dot"></span>유럽 HS코드 수입
+    </a>
+    <a class="nav-item" data-view="hscode-kr">
+      <span class="dot"></span>국내 HS코드 수출입
+    </a>
+    <a class="nav-item" data-view="naics">
+      <span class="dot"></span>NAICS 산업별
+    </a>
+    <a class="nav-item" data-view="m3">
+      <span class="dot"></span>M3 제조업 지표
+    </a>
+
+    <div class="nav-section">분석</div>
+    <a class="nav-item" data-view="overlay">
+      <span class="dot"></span>기업 실적 오버레이
+    </a>
+    <a class="nav-item" data-view="settings">
+      <span class="dot"></span>설정 / API 키
+    </a>
+
+    <div class="sidebar-footer">
+      <span>v0.1 샘플 모드</span>
+      <button class="theme-toggle" id="themeToggle" aria-label="테마 전환"></button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ========================================
+         DASHBOARD VIEW
+         ======================================== -->
+    <section class="view active" id="view-dashboard">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">대시보드</h1>
+          <div class="page-subtitle">미국 · 유럽 무역 통계와 한국 주요 기업 실적을 한눈에</div>
+        </div>
+        <div class="pill-row">
+          <span class="pill success">● 실시간 연결: 샘플 모드</span>
+          <span class="pill neutral">최종 갱신: 2026-04-18</span>
+        </div>
+      </div>
+
+      <div class="grid grid-4" style="margin-bottom:16px">
+        <div class="card kpi">
+          <div class="kpi-label">🇺🇸 미국 전체 수입 (6개월)</div>
+          <div class="kpi-value">$1.83T</div>
+          <div class="kpi-delta up">▲ +4.2% YoY</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-label">🇰🇷 대미 수출 비중</div>
+          <div class="kpi-value">5.1%</div>
+          <div class="kpi-delta up">▲ +0.6%p</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-label">💾 메모리 반도체 수입 (3월)</div>
+          <div class="kpi-value">$3.48B</div>
+          <div class="kpi-delta up">▲ +28.7% YoY</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-label">💄 화장품 수입 (3월)</div>
+          <div class="kpi-value">$782M</div>
+          <div class="kpi-delta up">▲ +15.3% YoY</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title">주요 HS코드 · 한국 대미 수출 추이</div>
+              <div class="card-sub">월별, 단위: USD Million</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-dashboard-1"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title">섹터별 대미 점유율 변화</div>
+              <div class="card-sub">최근 3년 YoY 변동 (%p)</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-dashboard-2"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid grid-3" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title">빠른 접근</div>
+          <div class="card-sub">자주 보는 데이터</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            <a class="country-chip" style="--country-color:#4F6BED" data-jump="hscode-us" data-hs="854232">메모리 반도체 (854232)</a>
+            <a class="country-chip" style="--country-color:#F78DA7" data-jump="hscode-us" data-hs="3304">화장품 (3304)</a>
+            <a class="country-chip" style="--country-color:#F5A623" data-jump="naics" data-naics="311824">라면 산업 (NAICS 311824)</a>
+            <a class="country-chip" style="--country-color:#22C5A7" data-jump="naics" data-naics="335311">변압기 (NAICS 335311)</a>
+          </div>
+        </div>
+        <div class="card col-span-2">
+          <div class="card-title">관전 포인트</div>
+          <div class="card-sub">현재 데이터에서 주목할 흐름</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+            <div style="padding:12px 14px;background:var(--surface-alt);border-radius:8px;border-left:3px solid #4F6BED">
+              <div style="font-weight:600;font-size:13px">📈 HBM 드라이브로 한국 메모리 점유율 급상승</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px">미국 메모리 반도체 수입에서 한국 점유율이 2024년 저점 34% → 2026년 1Q 52%까지 상승. HBM·DDR5 수요가 견인.</div>
+            </div>
+            <div style="padding:12px 14px;background:var(--surface-alt);border-radius:8px;border-left:3px solid #F78DA7">
+              <div style="font-weight:600;font-size:13px">💄 K-뷰티 유럽 침투 가속</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px">유럽 화장품 수입에서 한국 비중이 프랑스, 독일에 이어 3위권 진입. 소형 브랜드 역직구 증가.</div>
+            </div>
+            <div style="padding:12px 14px;background:var(--surface-alt);border-radius:8px;border-left:3px solid #F5A623">
+              <div style="font-weight:600;font-size:13px">⚡ 미국 전력기기 무역적자 확대</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px">변압기 NAICS 적자폭이 2024년 대비 2배. 국내 전력기기 업체 수혜 지속 전망.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         HS CODE US VIEW
+         ======================================== -->
+    <section class="view" id="view-hscode-us">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">미국 HS코드 수입 데이터</h1>
+          <div class="page-subtitle">U.S. Census Bureau · 특정 HS코드에 대한 국가별 수입 추이</div>
+        </div>
+        <div class="pill-row">
+          <span class="pill neutral">데이터: 월별 갱신</span>
+          <span class="pill warn">후행 1~2개월</span>
+        </div>
+      </div>
+
+      <div class="info-banner">
+        <div class="info-icon">i</div>
+        <div>HS코드 6자리까지는 국제 공통입니다. 예시: <b>854232</b>(메모리), <b>3304</b>(화장품), <b>870380</b>(전기차). <a href="https://www.trade.gov/harmonized-system-hs-codes" target="_blank" style="color:inherit;text-decoration:underline">HS코드 조회 →</a></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header-row">
+          <div>
+            <div class="card-title">조회 조건</div>
+          </div>
+        </div>
+        <div class="hs-search">
+          <input type="text" id="hsInput" placeholder="HS코드 입력 (예: 854232)" value="854232">
+          <select class="control" id="hsPreset">
+            <option value="854232">854232 · 메모리 반도체</option>
+            <option value="3304">3304 · 화장품</option>
+            <option value="870380">870380 · 전기자동차</option>
+            <option value="8504">8504 · 변압기</option>
+            <option value="190230">190230 · 인스턴트 라면</option>
+          </select>
+          <div class="seg" data-group="hs-period">
+            <button class="active" data-val="monthly">월별</button>
+            <button data-val="quarterly">분기별</button>
+          </div>
+          <div class="seg" data-group="hs-metric">
+            <button class="active" data-val="value">수입액</button>
+            <button data-val="share">점유율</button>
+          </div>
+          <button class="btn" id="hsApply">조회</button>
+        </div>
+        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px" id="hsCountries">
+          <!-- dynamic country chips -->
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card col-span-2">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title" id="hsChartTitle">🇺🇸 미국 메모리 반도체 수입 추이 (HS 854232)</div>
+              <div class="card-sub">국가별 월별 수입액 · USD Million</div>
+            </div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chart-hs-main"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">국가별 시장점유율 (최근)</div>
+          <div class="card-sub">최근 12개월 누적 기준</div>
+          <div class="chart-wrap"><canvas id="chart-hs-share"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">YoY 성장률</div>
+          <div class="card-sub">최근 월 전년 동월 대비</div>
+          <div class="chart-wrap"><canvas id="chart-hs-yoy"></canvas></div>
+        </div>
+
+        <div class="card col-span-2">
+          <div class="card-title">데이터 테이블</div>
+          <div class="card-sub">최근 12개월 원본 데이터</div>
+          <div style="overflow:auto;max-height:320px;margin-top:8px">
+            <table id="hsTable">
+              <thead><tr><th>기간</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         HS CODE EU VIEW
+         ======================================== -->
+    <section class="view" id="view-hscode-eu">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">유럽 HS코드 수입 데이터</h1>
+          <div class="page-subtitle">Eurostat · EU 27개국 합계 기준 수입 통계</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="hs-search">
+          <select class="control" id="euHsPreset">
+            <option value="3304">3304 · 화장품</option>
+            <option value="854232">854232 · 메모리 반도체</option>
+            <option value="870380">870380 · 전기자동차</option>
+            <option value="190230">190230 · 인스턴트 라면</option>
+          </select>
+          <div class="seg" data-group="eu-period">
+            <button class="active" data-val="monthly">월별</button>
+            <button data-val="quarterly">분기별</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card col-span-2">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title" id="euChartTitle">🇪🇺 EU 화장품 수입 추이 (HS 3304)</div>
+              <div class="card-sub">주요 수출국별 월별 수입액 · EUR Million</div>
+            </div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chart-eu-main"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">한국 수출 점유율 추이</div>
+          <div class="card-sub">EU 수입 내 한국 비중 (%)</div>
+          <div class="chart-wrap"><canvas id="chart-eu-share"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">국가별 비중 (최근 12개월)</div>
+          <div class="chart-wrap"><canvas id="chart-eu-donut"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         KOREA HS CODE VIEW
+         ======================================== -->
+    <section class="view" id="view-hscode-kr">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">국내 HS코드 수출입 데이터</h1>
+          <div class="page-subtitle">관세청 · 한국무역협회 · 품목별 · 국가별 수출·수입 통계</div>
+        </div>
+        <div class="pill-row">
+          <span class="pill neutral">월별 갱신</span>
+          <span class="pill success">한국 발표 기준 가장 빠름</span>
+        </div>
+      </div>
+
+      <div class="info-banner">
+        <div class="info-icon">i</div>
+        <div>한국 통계는 미국·유럽 대비 <b>1~2개월 빨리</b> 공개됩니다 (관세청이 월초에 전월 확정치 발표). 흐름 선행 확인용으로 유용합니다.</div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header-row"><div class="card-title">조회 조건</div></div>
+        <div class="hs-search">
+          <select class="control" id="krHsPreset">
+            <option value="854232">854232 · 메모리 반도체</option>
+            <option value="3304">3304 · 화장품</option>
+            <option value="870380">870380 · 전기자동차</option>
+            <option value="8504">8504 · 변압기</option>
+            <option value="190230">190230 · 인스턴트 라면</option>
+          </select>
+          <div class="seg" data-group="kr-flow">
+            <button class="active" data-val="exports">수출</button>
+            <button data-val="imports">수입</button>
+            <button data-val="balance">수출-수입</button>
+          </div>
+          <div class="seg" data-group="kr-period">
+            <button class="active" data-val="monthly">월별</button>
+            <button data-val="quarterly">분기별</button>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px" id="krCountries"></div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card col-span-2">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title" id="krChartTitle">🇰🇷 한국 메모리 반도체 수출 추이 (HS 854232)</div>
+              <div class="card-sub">수출국별 월별 수출액 · USD Million</div>
+            </div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chart-kr-main"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">국가별 비중 (최근 12개월)</div>
+          <div class="card-sub">누적 수출액 기준</div>
+          <div class="chart-wrap"><canvas id="chart-kr-share"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">수출-수입 비교</div>
+          <div class="card-sub">월별 수출액 vs 수입액 · 무역수지</div>
+          <div class="chart-wrap"><canvas id="chart-kr-balance"></canvas></div>
+        </div>
+
+        <div class="card col-span-2">
+          <div class="card-title">데이터 테이블</div>
+          <div class="card-sub">최근 12개월 원본 데이터</div>
+          <div style="overflow:auto;max-height:320px;margin-top:8px">
+            <table id="krTable">
+              <thead><tr><th>기간</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         NAICS VIEW
+         ======================================== -->
+    <section class="view" id="view-naics">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">NAICS 산업별 무역 데이터</h1>
+          <div class="page-subtitle">북미 산업분류 기준 · 산업군 단위로 수출입과 무역수지 확인</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="hs-search">
+          <select class="control" id="naicsPreset">
+            <option value="311824">311824 · 라면 · 파스타 제조업</option>
+            <option value="335311">335311 · 변압기 제조업</option>
+            <option value="334413">334413 · 반도체 제조업</option>
+            <option value="325620">325620 · 화장품 · 위생용품</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card col-span-2">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title" id="naicsChartTitle">🇺🇸 미국 라면·파스타 산업 무역수지 (NAICS 311824)</div>
+              <div class="card-sub">월별 수출(Export) · 수입(Import) · 무역수지(Trade Balance)</div>
+            </div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chart-naics-main"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">무역수지 누적 추이</div>
+          <div class="card-sub">연도별 적자/흑자 규모</div>
+          <div class="chart-wrap"><canvas id="chart-naics-balance"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">핵심 지표</div>
+          <div class="card-sub">최근 12개월</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px" id="naicsKpi">
+            <!-- populated -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         M3 VIEW
+         ======================================== -->
+    <section class="view" id="view-m3">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">M3 제조업 지표</h1>
+          <div class="page-subtitle">U.S. Census Bureau M3 · 미국 내 제조업 신규주문 · 재고 · 출하 · 수주잔고</div>
+        </div>
+      </div>
+
+      <div class="info-banner">
+        <div class="info-icon">i</div>
+        <div>M3는 <b>미국 내 생산</b> 기준 지표입니다. 수출입 데이터가 포착하지 못하는 국내 제조업 흐름을 보완합니다. (반도체 등 전략산업은 공개 제한)</div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="hs-search">
+          <select class="control" id="m3Preset">
+            <option value="auto">자동차 · 부품</option>
+            <option value="electric">전력기기 · 변압기</option>
+            <option value="machinery">산업용 기계</option>
+            <option value="computers">컴퓨터 · 전자</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-title">신규 주문 (New Orders)</div>
+          <div class="card-sub">USD Billion</div>
+          <div class="chart-wrap"><canvas id="chart-m3-orders"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">재고 (Inventory)</div>
+          <div class="card-sub">USD Billion</div>
+          <div class="chart-wrap"><canvas id="chart-m3-inventory"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">출하량 (Shipments)</div>
+          <div class="card-sub">USD Billion</div>
+          <div class="chart-wrap"><canvas id="chart-m3-shipments"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">수주잔고 (Unfilled Orders)</div>
+          <div class="card-sub">USD Billion · 백로그</div>
+          <div class="chart-wrap"><canvas id="chart-m3-backlog"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         OVERLAY VIEW
+         ======================================== -->
+    <section class="view" id="view-overlay">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">기업 실적 오버레이</h1>
+          <div class="page-subtitle">수출 데이터 위에 기업의 매출·영업이익·CAPEX·마진을 겹쳐서 시각화</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:10px">기업 선택</div>
+        <div class="grid grid-4" id="companyList">
+          <!-- populated -->
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="hs-search">
+          <label style="font-size:12px;color:var(--text-muted)">오버레이 대상 수출 데이터</label>
+          <select class="control" id="overlayHs">
+            <option value="854232">🇺🇸 미국 메모리 수입 (HS 854232)</option>
+            <option value="3304">🇺🇸 미국 화장품 수입 (HS 3304)</option>
+            <option value="190230">🇺🇸 미국 라면 수입 (HS 190230)</option>
+            <option value="8504">🇺🇸 미국 변압기 수입 (HS 8504)</option>
+          </select>
+          <div class="seg" data-group="overlay-metric">
+            <button class="active" data-val="revenue">매출액</button>
+            <button data-val="opincome">영업이익</button>
+            <button data-val="capex">CAPEX</button>
+            <button data-val="margin">영업이익률</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card col-span-2">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title" id="overlayTitle">SK하이닉스 vs 미국 메모리 수입 (한국 비중)</div>
+              <div class="card-sub">왼쪽축: 수출액 · 오른쪽축: 기업 실적</div>
+            </div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chart-overlay-main"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">상관관계</div>
+          <div class="card-sub">선택 기간 수출-실적 상관계수</div>
+          <div class="chart-wrap"><canvas id="chart-overlay-corr"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">분기별 실적 스냅샷</div>
+          <div style="overflow:auto;margin-top:8px">
+            <table id="overlayTable">
+              <thead><tr><th>분기</th><th class="num">매출</th><th class="num">OP</th><th class="num">CAPEX</th><th class="num">OPM</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         SETTINGS VIEW
+         ======================================== -->
+    <section class="view" id="view-settings">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">설정 / API 키</h1>
+          <div class="page-subtitle">실데이터 연결을 위한 API 키를 등록하세요</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <!-- KR Customs -->
+        <div class="card col-span-2">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title">🇰🇷 관세청 수출입무역통계 (공공데이터포털)</div>
+              <div class="card-sub">무료 · 가입 후 10~20분 내 발급 · 국내 HS코드 수출입 데이터</div>
+            </div>
+            <a class="btn" href="https://www.data.go.kr/data/15100065/openapi.do" target="_blank">활용신청 페이지</a>
+          </div>
+          <div class="grid grid-2" style="gap:12px;margin-top:12px">
+            <ol class="step-list">
+              <li><b>공공데이터포털 가입</b><br><span class="muted">data.go.kr 회원가입 (공동인증서 · 간편로그인 가능)</span></li>
+              <li><b>"관세청_수출입무역통계" 검색</b><br><span class="muted">상단 링크 클릭 또는 data.go.kr 에서 "수출입무역통계" 검색</span></li>
+              <li><b>활용신청 클릭</b><br><span class="muted">용도에 "개인 참조" 선택, 트래픽 1,000회/일 이상 신청 추천</span></li>
+              <li><b>일반 인증키(Decoding) 복사</b><br><span class="muted">마이페이지 → 개발계정 → 일반 인증키 확인</span></li>
+              <li><b>아래 입력란에 붙여넣기 → 저장</b></li>
+            </ol>
+            <div>
+              <input class="control" type="text" placeholder="관세청 API Decoding Key 입력" style="width:100%" id="kcsKey">
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="btn" id="saveKcsKey">저장</button>
+                <button class="btn ghost" id="testKcsKey">연결 테스트</button>
+              </div>
+              <div style="margin-top:12px;padding:10px 12px;background:var(--surface-alt);border-radius:8px;font-size:11.5px;color:var(--text-muted);line-height:1.6">
+                <b style="color:var(--text)">샘플 엔드포인트</b><br>
+                <code style="font-size:10.5px">apis.data.go.kr/1220000/Itemtrade/<wbr>getItemtradeList?hsSgn=854232&strtYymm=202501&endYymm=202612&serviceKey=YOUR_KEY</code>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title">🇺🇸 U.S. Census Bureau</div>
+              <div class="card-sub">무료 · 이메일 인증 즉시 발급</div>
+            </div>
+          </div>
+          <ol class="step-list">
+            <li>우측 "키 발급" 버튼 클릭</li>
+            <li>이름 · 조직명(개인) · 이메일 입력</li>
+            <li>이메일 수신 → 링크 클릭으로 인증</li>
+            <li>이메일에 담긴 40자리 키 복사 후 저장</li>
+          </ol>
+          <input class="control" type="text" placeholder="Census API Key" style="width:100%;margin-top:10px" id="censusKey">
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn" id="saveCensusKey">저장</button>
+            <a class="btn ghost" href="https://api.census.gov/data/key_signup.html" target="_blank">키 발급</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title">🇪🇺 Eurostat</div>
+              <div class="card-sub">무료 · 키 불필요</div>
+            </div>
+          </div>
+          <div style="padding:12px;background:var(--surface-alt);border-radius:8px;font-size:12.5px;line-height:1.7">
+            Eurostat API는 별도 가입이나 키가 <b>필요 없습니다</b>. 공개 REST 엔드포인트를 바로 호출합니다.<br>
+            <code style="font-size:10.5px;word-break:break-all">ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/DS-059668?...</code>
+          </div>
+          <button class="btn ghost" id="testEurostat" style="margin-top:10px">연결 테스트</button>
+        </div>
+
+        <div class="card col-span-2">
+          <div class="card-header-row">
+            <div>
+              <div class="card-title">📊 DART (금감원 전자공시)</div>
+              <div class="card-sub">무료 · 기업 분기 실적 · 사업보고서</div>
+            </div>
+            <a class="btn" href="https://opendart.fss.or.kr/uss/umt/cnfrmMber/insertCnfrmMberView.do" target="_blank">회원가입</a>
+          </div>
+          <div class="grid grid-2" style="gap:12px;margin-top:12px">
+            <ol class="step-list">
+              <li><b>opendart.fss.or.kr 가입</b><br><span class="muted">이메일 본인확인 후 회원가입</span></li>
+              <li><b>인증키 신청</b><br><span class="muted">내정보 → 인증키 신청/관리 → 신청 → 즉시 발급</span></li>
+              <li><b>40자리 키 복사 → 저장</b></li>
+              <li><b>일일 호출 10,000건 무료</b><br><span class="muted">분기 실적 자동 수집에 충분</span></li>
+            </ol>
+            <div>
+              <input class="control" type="text" placeholder="DART API Key" style="width:100%" id="dartKey">
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="btn" id="saveDartKey">저장</button>
+                <a class="btn ghost" href="https://opendart.fss.or.kr/" target="_blank">사이트 이동</a>
+              </div>
+              <div style="margin-top:12px;padding:10px 12px;background:var(--surface-alt);border-radius:8px;font-size:11.5px;color:var(--text-muted);line-height:1.6">
+                <b style="color:var(--text)">샘플 엔드포인트</b><br>
+                <code style="font-size:10.5px">opendart.fss.or.kr/api/list.json?<wbr>crtfc_key=YOUR_KEY&corp_code=00126380</code>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card col-span-2">
+          <div class="card-title">현재 등록 상태</div>
+          <div id="keyStatus" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+          <div style="margin-top:14px;padding:12px;background:var(--surface-alt);border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.6">
+            💡 현재는 <b>샘플 데이터 모드</b>로 작동합니다. API 키를 등록하면 실데이터로 자동 전환됩니다.<br>
+            저장된 키는 브라우저 localStorage에 로컬 저장되며, 외부로 전송되지 않습니다.
+          </div>
+        </div>
+
+        <div class="card col-span-2">
+          <div class="card-title">사용 팁</div>
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--text-muted);line-height:1.6">
+            <div><b style="color:var(--text)">·</b> 후행 지표입니다. 미국·유럽 데이터는 보통 1~2개월 지연되어 공개됩니다.</div>
+            <div><b style="color:var(--text)">·</b> HS코드는 6자리까지 국제 공통, 그 뒤는 국가별로 다릅니다. (미국: 10자리, 한국: 10자리)</div>
+            <div><b style="color:var(--text)">·</b> 반도체처럼 미국이 전략산업으로 지정한 품목은 M3에서 비공개이지만, 수출입 데이터로는 확인 가능합니다.</div>
+            <div><b style="color:var(--text)">·</b> 기업 실적 오버레이는 환율·제품믹스·자회사 연결 등 변수로 100% 일치하지 않습니다. <b>흐름을 읽는 참조지표</b>로 활용하세요.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* =====================================
+   SAMPLE DATA GENERATORS
+   ===================================== */
+const months = [];
+const startYear = 2020, startMonth = 1;
+const endYear = 2026, endMonth = 3;
+for(let y=startYear; y<=endYear; y++){
+  const mStart = (y===startYear) ? startMonth : 1;
+  const mEnd = (y===endYear) ? endMonth : 12;
+  for(let m=mStart; m<=mEnd; m++){
+    months.push(`${y}-${String(m).padStart(2,'0')}`);
+  }
+}
+
+function genSeries(base, {amplitude=0.15, trend=0.002, cycleMonths=12, cyclePhase=0, events=[], seed=1}){
+  let rng = mulberry32(seed);
+  return months.map((label, i)=>{
+    const cyc = Math.sin((i/cycleMonths)*2*Math.PI + cyclePhase);
+    const tr = 1 + trend*i;
+    let v = base * tr * (1 + amplitude*cyc) * (1 + (rng()-0.5)*0.08);
+    events.forEach(ev=>{
+      const pos = months.indexOf(ev.at);
+      if(pos>=0){
+        const dist = i - pos;
+        if(ev.duration==null || Math.abs(dist) <= ev.duration){
+          const fade = ev.duration ? (1 - Math.abs(dist)/ev.duration) : (dist>=0 ? Math.exp(-dist/(ev.decay||6)) : 0);
+          v *= (1 + ev.impact * fade);
+        }
+      }
+    });
+    return Math.max(0, Math.round(v));
+  });
+}
+function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+
+/* Country palettes */
+const COLORS = {
+  korea:'#4F6BED', china:'#EA5B5B', japan:'#F5A623', taiwan:'#22C5A7',
+  malaysia:'#A68BF2', usa:'#5C7CFF', france:'#F78DA7', germany:'#34495E',
+  italy:'#16A085', vietnam:'#E67E22', uk:'#8E44AD'
+};
+const C_NAMES = {
+  korea:'한국', china:'중국', japan:'일본', taiwan:'대만', malaysia:'말레이시아',
+  usa:'미국', france:'프랑스', germany:'독일', italy:'이탈리아', vietnam:'베트남', uk:'영국'
+};
+
+/* HS code datasets */
+const HS_DATA = {
+  '854232': {  // Memory semiconductors - US imports
+    title:'🇺🇸 미국 메모리 반도체 수입 추이 (HS 854232)',
+    unit:'USD Million',
+    countries: {
+      korea:   genSeries(900, {trend:0.006, amplitude:0.25, cyclePhase:0, events:[
+        {at:'2022-10', impact:-0.35, decay:10},  // memory downturn
+        {at:'2024-06', impact:0.45, decay:18},   // HBM recovery
+        {at:'2025-08', impact:0.30, decay:14},
+      ], seed:1}),
+      taiwan:  genSeries(800, {trend:0.005, amplitude:0.22, cyclePhase:0.8, events:[
+        {at:'2022-10', impact:-0.30, decay:10},
+        {at:'2024-06', impact:0.35, decay:16},
+      ], seed:2}),
+      japan:   genSeries(500, {trend:0.003, amplitude:0.2, cyclePhase:1.4, events:[
+        {at:'2022-10', impact:-0.28, decay:10},
+      ], seed:3}),
+      malaysia:genSeries(400, {trend:0.008, amplitude:0.18, events:[
+        {at:'2023-01', impact:0.30, decay:20},
+      ], seed:4}),
+      china:   genSeries(850, {trend:-0.006, amplitude:0.2, events:[
+        {at:'2022-01', impact:-0.20, decay:15},
+        {at:'2023-06', impact:-0.30, decay:18},
+      ], seed:5}),
+    }
+  },
+  '3304': {  // Cosmetics - US imports
+    title:'🇺🇸 미국 화장품 수입 추이 (HS 3304)',
+    unit:'USD Million',
+    countries: {
+      korea:   genSeries(90, {trend:0.015, amplitude:0.12, events:[
+        {at:'2023-01', impact:0.30, decay:20},
+        {at:'2024-06', impact:0.25, decay:18},
+      ], seed:6}),
+      france:  genSeries(260, {trend:0.003, amplitude:0.1, seed:7}),
+      china:   genSeries(80, {trend:-0.004, amplitude:0.14, seed:8}),
+      japan:   genSeries(50, {trend:0.002, amplitude:0.1, seed:9}),
+    }
+  },
+  '870380': {  // EV
+    title:'🇺🇸 미국 전기자동차 수입 추이 (HS 870380)',
+    unit:'USD Million',
+    countries: {
+      korea:   genSeries(300, {trend:0.012, amplitude:0.15, seed:10}),
+      germany: genSeries(450, {trend:0.004, amplitude:0.12, seed:11}),
+      japan:   genSeries(200, {trend:0.006, amplitude:0.13, seed:12}),
+      china:   genSeries(50, {trend:0.01, amplitude:0.2, seed:13}),
+    }
+  },
+  '8504': {  // Transformers
+    title:'🇺🇸 미국 변압기 수입 추이 (HS 8504)',
+    unit:'USD Million',
+    countries: {
+      korea:   genSeries(120, {trend:0.015, amplitude:0.12, events:[
+        {at:'2023-06', impact:0.30, decay:24},
+      ], seed:14}),
+      china:   genSeries(180, {trend:0.003, amplitude:0.1, seed:15}),
+      mexico:  genSeries(90, {trend:0.01, amplitude:0.11, seed:16}),
+      germany: genSeries(70, {trend:0.005, amplitude:0.1, seed:17}),
+    }
+  },
+  '190230': {  // Instant noodles
+    title:'🇺🇸 미국 인스턴트 라면 수입 추이 (HS 190230)',
+    unit:'USD Million',
+    countries: {
+      korea:   genSeries(22, {trend:0.018, amplitude:0.1, events:[
+        {at:'2022-01', impact:0.30, decay:20},
+        {at:'2024-03', impact:0.35, decay:18},
+      ], seed:18}),
+      china:   genSeries(15, {trend:0.003, amplitude:0.1, seed:19}),
+      japan:   genSeries(9, {trend:0.005, amplitude:0.1, seed:20}),
+      vietnam: genSeries(18, {trend:0.012, amplitude:0.12, seed:21}),
+    }
+  }
+};
+
+/* EU data */
+const EU_HS_DATA = {
+  '3304': {
+    title:'🇪🇺 EU 화장품 수입 추이 (HS 3304)',
+    unit:'EUR Million',
+    countries: {
+      korea:   genSeries(50, {trend:0.02, amplitude:0.13, events:[
+        {at:'2023-06', impact:0.25, decay:18}
+      ], seed:30}),
+      usa:     genSeries(180, {trend:0.004, amplitude:0.1, seed:31}),
+      china:   genSeries(70, {trend:-0.002, amplitude:0.11, seed:32}),
+      japan:   genSeries(40, {trend:0.003, amplitude:0.1, seed:33}),
+      uk:      genSeries(120, {trend:0.002, amplitude:0.1, seed:34}),
+    }
+  },
+  '854232': {
+    title:'🇪🇺 EU 메모리 반도체 수입 추이 (HS 854232)',
+    unit:'EUR Million',
+    countries: {
+      korea:   genSeries(400, {trend:0.008, amplitude:0.2, seed:35}),
+      taiwan:  genSeries(350, {trend:0.005, amplitude:0.18, seed:36}),
+      china:   genSeries(200, {trend:-0.005, amplitude:0.15, seed:37}),
+      japan:   genSeries(180, {trend:0.003, amplitude:0.17, seed:38}),
+    }
+  },
+  '870380': {
+    title:'🇪🇺 EU 전기자동차 수입 추이 (HS 870380)',
+    unit:'EUR Million',
+    countries: {
+      korea:   genSeries(250, {trend:0.015, amplitude:0.15, seed:39}),
+      china:   genSeries(300, {trend:0.025, amplitude:0.2, events:[
+        {at:'2023-06', impact:0.5, decay:24}
+      ], seed:40}),
+      japan:   genSeries(220, {trend:0.005, amplitude:0.13, seed:41}),
+    }
+  },
+  '190230': {
+    title:'🇪🇺 EU 인스턴트 라면 수입 추이 (HS 190230)',
+    unit:'EUR Million',
+    countries: {
+      korea:   genSeries(8, {trend:0.022, amplitude:0.12, seed:42}),
+      china:   genSeries(6, {trend:0.004, amplitude:0.1, seed:43}),
+      japan:   genSeries(4, {trend:0.006, amplitude:0.1, seed:44}),
+      vietnam: genSeries(12, {trend:0.014, amplitude:0.12, seed:45}),
+    }
+  }
+};
+
+/* Korea HS trade data - by country */
+const KR_HS_DATA = {
+  '854232': {
+    title:'🇰🇷 한국 메모리 반도체 수출입 (HS 854232)',
+    unit:'USD Million',
+    exports: {
+      usa:     genSeries(900, {trend:0.006, amplitude:0.25, events:[
+        {at:'2022-10', impact:-0.35, decay:10},{at:'2024-06', impact:0.45, decay:18}
+      ], seed:200}),
+      china:   genSeries(2200, {trend:0, amplitude:0.22, events:[
+        {at:'2022-10', impact:-0.4, decay:12},{at:'2024-06', impact:0.3, decay:14}
+      ], seed:201}),
+      japan:   genSeries(250, {trend:0.004, amplitude:0.18, seed:202}),
+      taiwan:  genSeries(400, {trend:0.005, amplitude:0.2, events:[
+        {at:'2024-06', impact:0.3, decay:14}
+      ], seed:203}),
+      vietnam: genSeries(800, {trend:0.008, amplitude:0.18, seed:204}),
+    },
+    imports: {
+      japan:   genSeries(180, {trend:0.003, amplitude:0.15, seed:210}),
+      usa:     genSeries(150, {trend:0.005, amplitude:0.15, seed:211}),
+      china:   genSeries(350, {trend:-0.003, amplitude:0.18, seed:212}),
+      taiwan:  genSeries(120, {trend:0.002, amplitude:0.15, seed:213}),
+    }
+  },
+  '3304': {
+    title:'🇰🇷 한국 화장품 수출입 (HS 3304)',
+    unit:'USD Million',
+    exports: {
+      china:   genSeries(280, {trend:-0.002, amplitude:0.1, events:[
+        {at:'2022-04', impact:-0.2, decay:20}
+      ], seed:220}),
+      usa:     genSeries(85, {trend:0.018, amplitude:0.1, events:[
+        {at:'2023-06', impact:0.3, decay:18},{at:'2024-06', impact:0.25, decay:16}
+      ], seed:221}),
+      japan:   genSeries(60, {trend:0.02, amplitude:0.1, events:[
+        {at:'2023-06', impact:0.35, decay:18}
+      ], seed:222}),
+      vietnam: genSeries(35, {trend:0.015, amplitude:0.1, seed:223}),
+      taiwan:  genSeries(20, {trend:0.012, amplitude:0.1, seed:224}),
+    },
+    imports: {
+      france:  genSeries(120, {trend:0.004, amplitude:0.1, seed:230}),
+      usa:     genSeries(45, {trend:0.003, amplitude:0.1, seed:231}),
+      japan:   genSeries(30, {trend:0.002, amplitude:0.1, seed:232}),
+      china:   genSeries(20, {trend:-0.002, amplitude:0.1, seed:233}),
+    }
+  },
+  '870380': {
+    title:'🇰🇷 한국 전기자동차 수출입 (HS 870380)',
+    unit:'USD Million',
+    exports: {
+      usa:     genSeries(300, {trend:0.012, amplitude:0.15, seed:240}),
+      germany: genSeries(180, {trend:0.008, amplitude:0.13, seed:241}),
+      uk:      genSeries(90, {trend:0.01, amplitude:0.13, seed:242}),
+      france:  genSeries(60, {trend:0.01, amplitude:0.12, seed:243}),
+      china:   genSeries(40, {trend:-0.004, amplitude:0.18, seed:244}),
+    },
+    imports: {
+      germany: genSeries(85, {trend:0.006, amplitude:0.12, seed:250}),
+      usa:     genSeries(110, {trend:0.008, amplitude:0.14, seed:251}),
+      china:   genSeries(30, {trend:0.02, amplitude:0.2, seed:252}),
+    }
+  },
+  '8504': {
+    title:'🇰🇷 한국 변압기 수출입 (HS 8504)',
+    unit:'USD Million',
+    exports: {
+      usa:     genSeries(120, {trend:0.015, amplitude:0.12, events:[
+        {at:'2023-06', impact:0.3, decay:24}
+      ], seed:260}),
+      china:   genSeries(90, {trend:0.004, amplitude:0.1, seed:261}),
+      japan:   genSeries(40, {trend:0.005, amplitude:0.1, seed:262}),
+      vietnam: genSeries(55, {trend:0.012, amplitude:0.12, seed:263}),
+      germany: genSeries(35, {trend:0.01, amplitude:0.1, seed:264}),
+    },
+    imports: {
+      china:   genSeries(65, {trend:0.002, amplitude:0.12, seed:270}),
+      japan:   genSeries(55, {trend:0.002, amplitude:0.1, seed:271}),
+      germany: genSeries(30, {trend:0.004, amplitude:0.1, seed:272}),
+    }
+  },
+  '190230': {
+    title:'🇰🇷 한국 인스턴트 라면 수출입 (HS 190230)',
+    unit:'USD Million',
+    exports: {
+      usa:     genSeries(22, {trend:0.018, amplitude:0.1, events:[
+        {at:'2022-01', impact:0.3, decay:20},{at:'2024-03', impact:0.35, decay:18}
+      ], seed:280}),
+      china:   genSeries(30, {trend:0.012, amplitude:0.1, seed:281}),
+      japan:   genSeries(15, {trend:0.01, amplitude:0.1, seed:282}),
+      vietnam: genSeries(8, {trend:0.015, amplitude:0.1, seed:283}),
+      taiwan:  genSeries(6, {trend:0.012, amplitude:0.1, seed:284}),
+    },
+    imports: {
+      china:   genSeries(4, {trend:0.005, amplitude:0.1, seed:290}),
+      japan:   genSeries(3, {trend:0.003, amplitude:0.1, seed:291}),
+      vietnam: genSeries(2, {trend:0.008, amplitude:0.1, seed:292}),
+    }
+  }
+};
+
+/* NAICS data - US trade balance */
+const NAICS_DATA = {
+  '311824': {
+    title:'🇺🇸 미국 라면·파스타 산업 무역수지 (NAICS 311824)',
+    exports: genSeries(25, {trend:0.003, amplitude:0.08, seed:50}),
+    imports: genSeries(60, {trend:0.012, amplitude:0.1, events:[
+      {at:'2023-01', impact:0.25, decay:20}
+    ], seed:51}),
+  },
+  '335311': {
+    title:'🇺🇸 미국 변압기 산업 무역수지 (NAICS 335311)',
+    exports: genSeries(40, {trend:0.003, amplitude:0.08, seed:52}),
+    imports: genSeries(120, {trend:0.018, amplitude:0.1, events:[
+      {at:'2023-06', impact:0.35, decay:24},
+      {at:'2024-12', impact:0.25, decay:18}
+    ], seed:53}),
+  },
+  '334413': {
+    title:'🇺🇸 미국 반도체 제조업 무역수지 (NAICS 334413)',
+    exports: genSeries(500, {trend:0.004, amplitude:0.15, seed:54}),
+    imports: genSeries(2500, {trend:0.006, amplitude:0.2, events:[
+      {at:'2024-06', impact:0.3, decay:18}
+    ], seed:55}),
+  },
+  '325620': {
+    title:'🇺🇸 미국 화장품·위생용품 무역수지 (NAICS 325620)',
+    exports: genSeries(300, {trend:0.002, amplitude:0.08, seed:56}),
+    imports: genSeries(450, {trend:0.01, amplitude:0.09, seed:57}),
+  }
+};
+
+/* M3 data */
+const M3_DATA = {
+  auto:     { orders:55, inv:70, ship:52, back:180, seed:60, amp:0.08, trend:0.002 },
+  electric: { orders:14, inv:18, ship:12, back:90, seed:70, amp:0.1, trend:0.01,
+    events:[{at:'2023-06', impact:0.2, decay:24},{at:'2024-12', impact:0.3, decay:18}] },
+  machinery:{ orders:36, inv:48, ship:35, back:140, seed:80, amp:0.07, trend:0.003 },
+  computers:{ orders:28, inv:35, ship:27, back:60, seed:90, amp:0.12, trend:0.005 },
+};
+function m3Series(key){
+  const d = M3_DATA[key];
+  return {
+    orders: genSeries(d.orders, {trend:d.trend, amplitude:d.amp, seed:d.seed, events:d.events||[]}),
+    inv:    genSeries(d.inv, {trend:d.trend*0.5, amplitude:d.amp*0.6, seed:d.seed+1}),
+    ship:   genSeries(d.ship, {trend:d.trend*0.9, amplitude:d.amp*0.9, seed:d.seed+2, events:d.events||[]}),
+    back:   genSeries(d.back, {trend:d.trend*1.3, amplitude:d.amp*0.4, seed:d.seed+3, events:d.events||[]}),
+  };
+}
+
+/* Company earnings data (quarterly) */
+const quarters = [];
+for(let y=2020; y<=2026; y++){
+  for(let q=1; q<=4; q++){
+    if(y===2026 && q>1) break;
+    quarters.push(`${y} ${q}Q`);
+  }
+}
+function genQuarterly(base, {trend=0.01, amp=0.1, seed=1, events=[]}){
+  const rng = mulberry32(seed);
+  return quarters.map((label,i)=>{
+    const cyc = Math.sin(i/4*2*Math.PI);
+    let v = base*(1+trend*i)*(1+amp*cyc)*(1+(rng()-0.5)*0.12);
+    events.forEach(ev=>{
+      const pos = quarters.indexOf(ev.at);
+      if(pos>=0){
+        const dist = i-pos;
+        if(dist>=0 && dist<=ev.decay){
+          v *= (1 + ev.impact*(1-dist/ev.decay));
+        }
+      }
+    });
+    return Math.round(v);
+  });
+}
+
+const COMPANIES = {
+  'hynix':   { name:'SK하이닉스', ticker:'000660', color:'#E31837',
+    revenue: genQuarterly(8000, {trend:0.02, amp:0.25, seed:100, events:[
+      {at:'2023 1Q', impact:-0.3, decay:3},
+      {at:'2024 2Q', impact:0.6, decay:6},
+    ]}),
+    opincome: genQuarterly(2500, {trend:0.02, amp:0.5, seed:101, events:[
+      {at:'2023 1Q', impact:-1.5, decay:3},
+      {at:'2024 2Q', impact:1.5, decay:6},
+    ]}),
+    capex: genQuarterly(3000, {trend:0.01, amp:0.2, seed:102}),
+    relatedHs:'854232'
+  },
+  'samsung': { name:'삼성전자 반도체', ticker:'005930', color:'#1428A0',
+    revenue: genQuarterly(18000, {trend:0.01, amp:0.22, seed:110, events:[
+      {at:'2023 1Q', impact:-0.35, decay:3},
+      {at:'2024 3Q', impact:0.5, decay:6},
+    ]}),
+    opincome: genQuarterly(5500, {trend:0.005, amp:0.6, seed:111, events:[
+      {at:'2023 1Q', impact:-1.8, decay:3},
+      {at:'2024 3Q', impact:1.2, decay:6},
+    ]}),
+    capex: genQuarterly(7500, {trend:0.005, amp:0.15, seed:112}),
+    relatedHs:'854232'
+  },
+  'amorepacific': { name:'아모레퍼시픽', ticker:'090430', color:'#1a1a1a',
+    revenue: genQuarterly(1000, {trend:0.01, amp:0.1, seed:120, events:[
+      {at:'2023 2Q', impact:0.2, decay:6}
+    ]}),
+    opincome: genQuarterly(110, {trend:0.015, amp:0.3, seed:121}),
+    capex: genQuarterly(60, {trend:0.005, amp:0.1, seed:122}),
+    relatedHs:'3304'
+  },
+  'samyang': { name:'삼양식품', ticker:'003230', color:'#F15B2A',
+    revenue: genQuarterly(250, {trend:0.022, amp:0.1, seed:130, events:[
+      {at:'2023 1Q', impact:0.25, decay:8}, {at:'2024 2Q', impact:0.3, decay:8}
+    ]}),
+    opincome: genQuarterly(35, {trend:0.03, amp:0.2, seed:131, events:[
+      {at:'2023 1Q', impact:0.4, decay:8}, {at:'2024 2Q', impact:0.5, decay:8}
+    ]}),
+    capex: genQuarterly(15, {trend:0.015, amp:0.3, seed:132, events:[
+      {at:'2022 2Q', impact:0.8, decay:4}, {at:'2024 4Q', impact:1.0, decay:4}
+    ]}),
+    relatedHs:'190230'
+  },
+  'nongshim': { name:'농심', ticker:'004370', color:'#E30613',
+    revenue: genQuarterly(780, {trend:0.008, amp:0.08, seed:140}),
+    opincome: genQuarterly(65, {trend:0.01, amp:0.2, seed:141, events:[
+      {at:'2021 1Q', impact:0.3, decay:10}
+    ]}),
+    capex: genQuarterly(40, {trend:0.005, amp:0.25, seed:142, events:[
+      {at:'2020 2Q', impact:1.2, decay:4}
+    ]}),
+    relatedHs:'190230'
+  },
+  'hyosung': { name:'효성중공업', ticker:'298040', color:'#0055A5',
+    revenue: genQuarterly(800, {trend:0.02, amp:0.1, seed:150, events:[
+      {at:'2023 3Q', impact:0.25, decay:10}
+    ]}),
+    opincome: genQuarterly(45, {trend:0.035, amp:0.3, seed:151, events:[
+      {at:'2023 3Q', impact:0.6, decay:12}
+    ]}),
+    capex: genQuarterly(30, {trend:0.025, amp:0.2, seed:152}),
+    relatedHs:'8504'
+  },
+  'lsec':    { name:'LS일렉트릭', ticker:'010120', color:'#003764',
+    revenue: genQuarterly(900, {trend:0.018, amp:0.1, seed:160, events:[
+      {at:'2023 3Q', impact:0.3, decay:10}
+    ]}),
+    opincome: genQuarterly(65, {trend:0.03, amp:0.28, seed:161, events:[
+      {at:'2023 3Q', impact:0.6, decay:10}
+    ]}),
+    capex: genQuarterly(50, {trend:0.02, amp:0.2, seed:162}),
+    relatedHs:'8504'
+  },
+  'kolmar': { name:'한국콜마', ticker:'161890', color:'#D91E2A',
+    revenue: genQuarterly(500, {trend:0.012, amp:0.08, seed:170, events:[
+      {at:'2023 2Q', impact:0.2, decay:8}, {at:'2024 2Q', impact:0.3, decay:8}
+    ]}),
+    opincome: genQuarterly(45, {trend:0.02, amp:0.25, seed:171, events:[
+      {at:'2024 2Q', impact:0.5, decay:8}
+    ]}),
+    capex: genQuarterly(25, {trend:0.01, amp:0.2, seed:172}),
+    relatedHs:'3304'
+  }
+};
+
+/* =====================================
+   CHART HELPERS
+   ===================================== */
+Chart.defaults.font.family = '"Pretendard Variable", Pretendard, system-ui, sans-serif';
+Chart.defaults.font.size = 11.5;
+
+function cssVar(name){return getComputedStyle(document.documentElement).getPropertyValue(name).trim()}
+
+function baseOptions(opts={}){
+  const grid = cssVar('--border');
+  const text = cssVar('--text-muted');
+  return {
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index', intersect:false},
+    plugins:{
+      legend:{display:true, position:'top', align:'end', labels:{boxWidth:10, boxHeight:10, color:text, font:{size:11.5}, padding:12, usePointStyle:true, pointStyle:'rectRounded'}},
+      tooltip:{
+        backgroundColor:cssVar('--surface'), titleColor:cssVar('--text'), bodyColor:cssVar('--text-muted'),
+        borderColor:grid, borderWidth:1, padding:10, boxPadding:4, usePointStyle:true,
+        titleFont:{weight:'600', size:12}, bodyFont:{size:11.5},
+        callbacks: opts.tooltipCallbacks || {}
+      }
+    },
+    scales:{
+      x:{grid:{color:'transparent', drawTicks:false}, ticks:{color:text, maxRotation:0, autoSkipPadding:18}},
+      y:{grid:{color:grid, drawBorder:false}, ticks:{color:text}, border:{display:false}},
+    },
+    elements:{point:{radius:0, hoverRadius:4}, line:{tension:0.35, borderWidth:2}},
+    ...(opts.extra||{})
+  };
+}
+
+function makeAreaDataset(label, data, color, {fill=true, yAxisID=null, borderDash=null, order=1, type=null}={}){
+  const ds = {
+    label, data, borderColor: color, backgroundColor: fill ? hexToRgba(color,0.12) : 'transparent',
+    fill: fill ? 'origin' : false, pointRadius:0, pointHoverRadius:4, tension:0.35, borderWidth:2,
+    order
+  };
+  if(yAxisID) ds.yAxisID = yAxisID;
+  if(borderDash) ds.borderDash = borderDash;
+  if(type) ds.type = type;
+  return ds;
+}
+function hexToRgba(hex,a=1){
+  const h = hex.replace('#','');
+  const v = h.length===3 ? h.split('').map(c=>c+c).join('') : h;
+  const r = parseInt(v.slice(0,2),16), g = parseInt(v.slice(2,4),16), b = parseInt(v.slice(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+const charts = {};
+function destroyChart(id){ if(charts[id]){charts[id].destroy(); delete charts[id];} }
+
+/* =====================================
+   NAVIGATION
+   ===================================== */
+document.querySelectorAll('.nav-item[data-view]').forEach(n=>{
+  n.addEventListener('click', e=>{
+    e.preventDefault();
+    const view = n.dataset.view;
+    switchView(view);
+  });
+});
+document.querySelectorAll('[data-jump]').forEach(el=>{
+  el.addEventListener('click', e=>{
+    const v = el.dataset.jump;
+    const hs = el.dataset.hs, naics = el.dataset.naics;
+    if(hs){document.getElementById('hsInput').value = hs; document.getElementById('hsPreset').value = hs;}
+    if(naics){document.getElementById('naicsPreset').value = naics;}
+    switchView(v);
+    if(hs) renderHsUS();
+    if(naics) renderNaics();
+  });
+});
+function switchView(view){
+  document.querySelectorAll('.nav-item[data-view]').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id===`view-${view}`));
+  const renderers = {
+    'dashboard':renderDashboard,'hscode-us':renderHsUS,'hscode-eu':renderHsEU,
+    'hscode-kr':renderHsKR,
+    'naics':renderNaics,'m3':renderM3,'overlay':renderOverlay,
+    'settings':renderSettings
+  };
+  renderers[view] && renderers[view]();
+}
+
+/* Theme toggle */
+const themeBtn = document.getElementById('themeToggle');
+themeBtn.addEventListener('click', ()=>{
+  const cur = document.documentElement.dataset.theme;
+  document.documentElement.dataset.theme = cur==='dark' ? 'light' : 'dark';
+  localStorage.setItem('theme-tradelens', document.documentElement.dataset.theme);
+  Object.keys(charts).forEach(k=>charts[k].update());
+  // re-render all to pick up new colors
+  rerenderAll();
+});
+const saved = localStorage.getItem('theme-tradelens');
+if(saved) document.documentElement.dataset.theme = saved; else document.documentElement.dataset.theme = 'light';
+
+function rerenderAll(){
+  const active = document.querySelector('.nav-item.active').dataset.view;
+  switchView(active);
+}
+
+/* =====================================
+   DASHBOARD
+   ===================================== */
+function renderDashboard(){
+  destroyChart('dashboard-1'); destroyChart('dashboard-2');
+
+  const memoryKorea = HS_DATA['854232'].countries.korea;
+  const cosmeticsKorea = HS_DATA['3304'].countries.korea;
+  const ramyeonKorea = HS_DATA['190230'].countries.korea;
+  const transformerKorea = HS_DATA['8504'].countries.korea;
+
+  charts['dashboard-1'] = new Chart(document.getElementById('chart-dashboard-1'), {
+    type:'line',
+    data:{
+      labels: months,
+      datasets:[
+        makeAreaDataset('메모리 반도체', memoryKorea, COLORS.korea, {fill:false}),
+        makeAreaDataset('화장품', cosmeticsKorea.map(v=>v*10), '#F78DA7', {fill:false}),
+        makeAreaDataset('라면', ramyeonKorea.map(v=>v*30), '#F5A623', {fill:false}),
+        makeAreaDataset('변압기', transformerKorea.map(v=>v*5), '#22C5A7', {fill:false}),
+      ]
+    },
+    options: baseOptions()
+  });
+
+  // Share change
+  const sectors = ['메모리','화장품','라면','변압기','전기차','자동차부품','디스플레이','배터리'];
+  const changes = [12.5, 8.3, 15.2, 6.7, 3.4, -1.2, -4.5, 2.8];
+  charts['dashboard-2'] = new Chart(document.getElementById('chart-dashboard-2'), {
+    type:'bar',
+    data:{
+      labels: sectors,
+      datasets:[{
+        label:'점유율 변화 (%p)',
+        data: changes,
+        backgroundColor: changes.map(c=>c>=0?hexToRgba(COLORS.korea,0.85):hexToRgba(COLORS.china,0.85)),
+        borderRadius: 6, barThickness: 24,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      plugins:{...baseOptions().plugins, legend:{display:false}},
+    }
+  });
+}
+
+/* =====================================
+   HS CODE US
+   ===================================== */
+let hsState = { period:'monthly', metric:'value', countries:{}, hs:'854232' };
+
+function renderHsUS(){
+  const hsCode = document.getElementById('hsInput').value.trim();
+  if(!HS_DATA[hsCode]){
+    alert(`HS ${hsCode} 샘플 데이터 없음. 프리셋에서 선택해주세요.`);
+    document.getElementById('hsInput').value = hsState.hs;
+    return;
+  }
+  hsState.hs = hsCode;
+
+  const data = HS_DATA[hsCode];
+  document.getElementById('hsChartTitle').textContent = data.title;
+
+  // countries chips
+  const wrap = document.getElementById('hsCountries');
+  wrap.innerHTML='';
+  Object.keys(data.countries).forEach(c=>{
+    if(hsState.countries[c]===undefined) hsState.countries[c]=true;
+    const chip = document.createElement('button');
+    chip.className = 'country-chip ' + (hsState.countries[c]?'on':'');
+    chip.style.setProperty('--country-color', COLORS[c] || '#888');
+    chip.textContent = C_NAMES[c]||c;
+    chip.addEventListener('click', ()=>{
+      hsState.countries[c] = !hsState.countries[c];
+      renderHsUS();
+    });
+    wrap.appendChild(chip);
+  });
+
+  destroyChart('hs-main'); destroyChart('hs-share'); destroyChart('hs-yoy');
+
+  const labels = hsState.period==='monthly' ? months : quarterize(months);
+  const labelCount = labels.length;
+
+  const datasets = [];
+  const totals = new Array(labelCount).fill(0);
+  Object.entries(data.countries).forEach(([c, series])=>{
+    if(!hsState.countries[c]) return;
+    const vals = hsState.period==='monthly' ? series : sumByQuarter(series);
+    vals.forEach((v,i)=>totals[i]+=v);
+  });
+
+  Object.entries(data.countries).forEach(([c, series])=>{
+    if(!hsState.countries[c]) return;
+    const vals = hsState.period==='monthly' ? series : sumByQuarter(series);
+    const plot = hsState.metric==='share'
+      ? vals.map((v,i)=>totals[i]?+(v/totals[i]*100).toFixed(1):0)
+      : vals;
+    datasets.push(makeAreaDataset(C_NAMES[c]||c, plot, COLORS[c]||'#888', {fill:false}));
+  });
+
+  charts['hs-main'] = new Chart(document.getElementById('chart-hs-main'), {
+    type:'line',
+    data:{labels, datasets},
+    options: baseOptions({tooltipCallbacks:{
+      label: (ctx)=> `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}${hsState.metric==='share'?'%':` ${data.unit.split(' ')[0]}`}`
+    }})
+  });
+
+  // Share donut
+  const last12Totals = {};
+  Object.entries(data.countries).forEach(([c,series])=>{
+    last12Totals[c] = series.slice(-12).reduce((a,b)=>a+b,0);
+  });
+  const totalAll = Object.values(last12Totals).reduce((a,b)=>a+b,0);
+  charts['hs-share'] = new Chart(document.getElementById('chart-hs-share'), {
+    type:'doughnut',
+    data:{
+      labels: Object.keys(last12Totals).map(c=>C_NAMES[c]||c),
+      datasets:[{
+        data: Object.values(last12Totals).map(v=>(v/totalAll*100).toFixed(1)),
+        backgroundColor: Object.keys(last12Totals).map(c=>COLORS[c]||'#888'),
+        borderWidth:0
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{
+        legend:{position:'right', labels:{boxWidth:10, boxHeight:10, color:cssVar('--text-muted'), usePointStyle:true}},
+        tooltip:{
+          backgroundColor:cssVar('--surface'), titleColor:cssVar('--text'), bodyColor:cssVar('--text-muted'),
+          borderColor:cssVar('--border'), borderWidth:1,
+          callbacks:{ label: c=>`${c.label}: ${c.parsed}%` }
+        }
+      }
+    }
+  });
+
+  // YoY
+  const yoyData = Object.entries(data.countries).map(([c,series])=>{
+    const last = series.slice(-1)[0];
+    const prev = series.slice(-13,-12)[0] || 1;
+    return { label:C_NAMES[c]||c, value:+(((last-prev)/prev)*100).toFixed(1), color:COLORS[c] };
+  }).sort((a,b)=>b.value-a.value);
+
+  charts['hs-yoy'] = new Chart(document.getElementById('chart-hs-yoy'), {
+    type:'bar',
+    data:{
+      labels: yoyData.map(d=>d.label),
+      datasets:[{
+        data: yoyData.map(d=>d.value),
+        backgroundColor: yoyData.map(d=>d.value>=0?hexToRgba(d.color,0.85):hexToRgba(COLORS.china,0.7)),
+        borderRadius:6, barThickness:20
+      }]
+    },
+    options:{ ...baseOptions(), indexAxis:'y', plugins:{...baseOptions().plugins, legend:{display:false}} }
+  });
+
+  // Table
+  renderHsTable(data);
+}
+
+function renderHsTable(data){
+  const tbl = document.getElementById('hsTable');
+  const countries = Object.keys(data.countries).filter(c=>hsState.countries[c]);
+  const rows12 = months.slice(-12);
+  const headHtml = `<tr><th>기간</th>${countries.map(c=>`<th class="num">${C_NAMES[c]||c}</th>`).join('')}</tr>`;
+  tbl.querySelector('thead').innerHTML = headHtml;
+  let bodyHtml = '';
+  const startIdx = months.length - 12;
+  rows12.forEach((m,i)=>{
+    bodyHtml += `<tr><td>${m}</td>`;
+    countries.forEach(c=>{
+      bodyHtml += `<td class="num">${data.countries[c][startIdx+i].toLocaleString()}</td>`;
+    });
+    bodyHtml += '</tr>';
+  });
+  tbl.querySelector('tbody').innerHTML = bodyHtml;
+}
+
+function quarterize(monthList){
+  const qs = [];
+  monthList.forEach(m=>{
+    const [y,mm]=m.split('-').map(Number);
+    const q = Math.ceil(mm/3);
+    const key = `${y} ${q}Q`;
+    if(qs[qs.length-1]!==key) qs.push(key);
+  });
+  return qs;
+}
+function sumByQuarter(arr){
+  const out = [];
+  for(let i=0;i<arr.length;i+=3){
+    out.push(arr.slice(i,i+3).reduce((a,b)=>a+b,0));
+  }
+  return out;
+}
+
+document.getElementById('hsApply').addEventListener('click', renderHsUS);
+document.getElementById('hsInput').addEventListener('keydown', e=>{ if(e.key==='Enter') renderHsUS(); });
+document.getElementById('hsPreset').addEventListener('change', e=>{
+  document.getElementById('hsInput').value = e.target.value;
+  hsState.countries = {};
+  renderHsUS();
+});
+// Segment handlers
+document.querySelectorAll('[data-group="hs-period"] button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    hsState.period = b.dataset.val;
+    renderHsUS();
+  });
+});
+document.querySelectorAll('[data-group="hs-metric"] button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    hsState.metric = b.dataset.val;
+    renderHsUS();
+  });
+});
+
+/* =====================================
+   HS CODE EU
+   ===================================== */
+function renderHsEU(){
+  const hs = document.getElementById('euHsPreset').value;
+  const data = EU_HS_DATA[hs];
+  document.getElementById('euChartTitle').textContent = data.title;
+
+  destroyChart('eu-main'); destroyChart('eu-share'); destroyChart('eu-donut');
+
+  const datasets = Object.entries(data.countries).map(([c,series])=>
+    makeAreaDataset(C_NAMES[c]||c, series, COLORS[c]||'#888', {fill:false})
+  );
+  charts['eu-main'] = new Chart(document.getElementById('chart-eu-main'),{
+    type:'line', data:{labels:months, datasets}, options: baseOptions()
+  });
+
+  // Korea share
+  const totals = months.map((_,i)=>Object.values(data.countries).reduce((s,arr)=>s+arr[i],0));
+  const shareKorea = (data.countries.korea||[]).map((v,i)=>+(v/totals[i]*100).toFixed(1));
+  charts['eu-share'] = new Chart(document.getElementById('chart-eu-share'),{
+    type:'line',
+    data:{labels:months, datasets:[
+      makeAreaDataset('한국 점유율', shareKorea, COLORS.korea, {fill:true})
+    ]},
+    options: baseOptions({tooltipCallbacks:{label:(c)=>`${c.dataset.label}: ${c.parsed.y}%`}})
+  });
+
+  // Donut recent 12
+  const last12={};
+  Object.entries(data.countries).forEach(([c,s])=>last12[c]=s.slice(-12).reduce((a,b)=>a+b,0));
+  const total = Object.values(last12).reduce((a,b)=>a+b,0);
+  charts['eu-donut'] = new Chart(document.getElementById('chart-eu-donut'),{
+    type:'doughnut',
+    data:{
+      labels:Object.keys(last12).map(c=>C_NAMES[c]||c),
+      datasets:[{data:Object.values(last12).map(v=>(v/total*100).toFixed(1)),
+        backgroundColor:Object.keys(last12).map(c=>COLORS[c]||'#888'), borderWidth:0}]
+    },
+    options:{responsive:true, maintainAspectRatio:false, cutout:'55%',
+      plugins:{legend:{position:'right',labels:{color:cssVar('--text-muted'),usePointStyle:true, boxWidth:10}},
+        tooltip:{backgroundColor:cssVar('--surface'), borderColor:cssVar('--border'),borderWidth:1,titleColor:cssVar('--text'), bodyColor:cssVar('--text-muted'),
+          callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}
+  });
+}
+document.getElementById('euHsPreset').addEventListener('change', renderHsEU);
+document.querySelectorAll('[data-group="eu-period"] button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    renderHsEU();
+  });
+});
+
+/* =====================================
+   KOREA HS CODE
+   ===================================== */
+let krState = { hs:'854232', flow:'exports', period:'monthly', countries:{} };
+
+function renderHsKR(){
+  const hs = document.getElementById('krHsPreset').value;
+  krState.hs = hs;
+  const data = KR_HS_DATA[hs];
+  if(!data) return;
+
+  const flowLabel = krState.flow==='exports'?'수출':(krState.flow==='imports'?'수입':'수출-수입');
+  document.getElementById('krChartTitle').textContent =
+    data.title.replace('수출입',flowLabel) + ` · ${krState.flow==='exports'?'수출국별':'(수출국별/수입국별)'}`;
+
+  const countries = krState.flow==='imports' ? data.imports : data.exports;
+
+  // Chip UI
+  const wrap = document.getElementById('krCountries');
+  wrap.innerHTML='';
+  Object.keys(countries).forEach(c=>{
+    const key = `${hs}:${krState.flow}:${c}`;
+    if(krState.countries[key]===undefined) krState.countries[key]=true;
+    const chip = document.createElement('button');
+    chip.className = 'country-chip ' + (krState.countries[key]?'on':'');
+    chip.style.setProperty('--country-color', COLORS[c]||'#888');
+    chip.textContent = C_NAMES[c]||c;
+    chip.addEventListener('click', ()=>{ krState.countries[key] = !krState.countries[key]; renderHsKR(); });
+    wrap.appendChild(chip);
+  });
+
+  destroyChart('kr-main'); destroyChart('kr-share'); destroyChart('kr-balance');
+
+  const labels = krState.period==='monthly' ? months : quarterize(months);
+
+  // Main chart
+  if(krState.flow==='balance'){
+    // Show total exports vs total imports
+    const totalExp = months.map((_,i)=>Object.values(data.exports).reduce((s,arr)=>s+arr[i],0));
+    const totalImp = months.map((_,i)=>Object.values(data.imports).reduce((s,arr)=>s+arr[i],0));
+    const balance = totalExp.map((v,i)=>v-totalImp[i]);
+    const plotE = krState.period==='monthly'?totalExp:sumByQuarter(totalExp);
+    const plotI = krState.period==='monthly'?totalImp:sumByQuarter(totalImp);
+    const plotB = krState.period==='monthly'?balance:sumByQuarter(balance);
+    charts['kr-main'] = new Chart(document.getElementById('chart-kr-main'),{
+      type:'line',
+      data:{labels, datasets:[
+        makeAreaDataset('수출 합계', plotE, '#22C5A7', {fill:true}),
+        makeAreaDataset('수입 합계', plotI, '#EA5B5B', {fill:true}),
+        makeAreaDataset('무역수지', plotB, '#4F6BED', {fill:false, borderDash:[6,4]}),
+      ]},
+      options: baseOptions()
+    });
+  } else {
+    const datasets = [];
+    Object.entries(countries).forEach(([c, series])=>{
+      const key = `${hs}:${krState.flow}:${c}`;
+      if(!krState.countries[key]) return;
+      const vals = krState.period==='monthly' ? series : sumByQuarter(series);
+      datasets.push(makeAreaDataset(C_NAMES[c]||c, vals, COLORS[c]||'#888', {fill:false}));
+    });
+    charts['kr-main'] = new Chart(document.getElementById('chart-kr-main'),{
+      type:'line', data:{labels, datasets},
+      options: baseOptions({tooltipCallbacks:{
+        label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} ${data.unit.split(' ')[0]}`
+      }})
+    });
+  }
+
+  // Share donut (last 12 months, by flow)
+  const shareSource = krState.flow==='imports' ? data.imports : data.exports;
+  const last12 = {};
+  Object.entries(shareSource).forEach(([c,s])=>last12[c]=s.slice(-12).reduce((a,b)=>a+b,0));
+  const total = Object.values(last12).reduce((a,b)=>a+b,0);
+  charts['kr-share'] = new Chart(document.getElementById('chart-kr-share'),{
+    type:'doughnut',
+    data:{
+      labels:Object.keys(last12).map(c=>C_NAMES[c]||c),
+      datasets:[{data:Object.values(last12).map(v=>+(v/total*100).toFixed(1)),
+        backgroundColor:Object.keys(last12).map(c=>COLORS[c]||'#888'),borderWidth:0}]
+    },
+    options:{responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{legend:{position:'right',labels:{color:cssVar('--text-muted'),usePointStyle:true, boxWidth:10}},
+        tooltip:{backgroundColor:cssVar('--surface'), borderColor:cssVar('--border'),borderWidth:1,titleColor:cssVar('--text'), bodyColor:cssVar('--text-muted'),
+          callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}
+  });
+
+  // Balance chart (monthly)
+  const totE = months.map((_,i)=>Object.values(data.exports).reduce((s,arr)=>s+arr[i],0));
+  const totI = months.map((_,i)=>Object.values(data.imports).reduce((s,arr)=>s+arr[i],0));
+  const balance = totE.map((v,i)=>v-totI[i]);
+  charts['kr-balance'] = new Chart(document.getElementById('chart-kr-balance'),{
+    type:'bar',
+    data:{labels:months.slice(-24), datasets:[{
+      label:'무역수지',
+      data: balance.slice(-24),
+      backgroundColor: balance.slice(-24).map(v=>v>=0?hexToRgba('#22C5A7',0.8):hexToRgba('#EA5B5B',0.8)),
+      borderRadius:4, barThickness:8
+    }]},
+    options:{...baseOptions(), plugins:{...baseOptions().plugins, legend:{display:false}}}
+  });
+
+  // Table
+  const tbl = document.getElementById('krTable');
+  const activeCountries = Object.keys(countries).filter(c=>krState.countries[`${hs}:${krState.flow}:${c}`]);
+  const displayCountries = krState.flow==='balance' ? Object.keys(data.exports) : activeCountries;
+  const headHtml = `<tr><th>기간</th>${displayCountries.map(c=>`<th class="num">${C_NAMES[c]||c}</th>`).join('')}</tr>`;
+  tbl.querySelector('thead').innerHTML = headHtml;
+  const startIdx = months.length - 12;
+  let bodyHtml = '';
+  months.slice(-12).forEach((m,i)=>{
+    bodyHtml += `<tr><td>${m}</td>`;
+    displayCountries.forEach(c=>{
+      const src = (krState.flow==='imports'?data.imports:data.exports)[c];
+      bodyHtml += `<td class="num">${src?src[startIdx+i].toLocaleString():'-'}</td>`;
+    });
+    bodyHtml += '</tr>';
+  });
+  tbl.querySelector('tbody').innerHTML = bodyHtml;
+}
+document.getElementById('krHsPreset').addEventListener('change', ()=>{ krState.countries={}; renderHsKR(); });
+document.querySelectorAll('[data-group="kr-flow"] button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); krState.flow=b.dataset.val; renderHsKR();
+  });
+});
+document.querySelectorAll('[data-group="kr-period"] button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); krState.period=b.dataset.val; renderHsKR();
+  });
+});
+
+/* =====================================
+   NAICS
+   ===================================== */
+function renderNaics(){
+  const code = document.getElementById('naicsPreset').value;
+  const data = NAICS_DATA[code];
+  document.getElementById('naicsChartTitle').textContent = data.title;
+
+  destroyChart('naics-main'); destroyChart('naics-balance');
+
+  const balance = data.imports.map((v,i)=>data.exports[i]-v);
+
+  charts['naics-main'] = new Chart(document.getElementById('chart-naics-main'), {
+    type:'line',
+    data:{
+      labels: months,
+      datasets:[
+        makeAreaDataset('수출 (Export)', data.exports, '#22C5A7', {fill:true}),
+        makeAreaDataset('수입 (Import)', data.imports, '#EA5B5B', {fill:true}),
+        makeAreaDataset('무역수지', balance, '#4F6BED', {fill:false, borderDash:[6,4]}),
+      ]
+    },
+    options: baseOptions()
+  });
+
+  // Yearly balance
+  const years = [...new Set(months.map(m=>m.split('-')[0]))];
+  const yearlyBalance = years.map(y=>{
+    let s=0;
+    months.forEach((m,i)=>{ if(m.startsWith(y)) s += balance[i]; });
+    return s;
+  });
+  charts['naics-balance'] = new Chart(document.getElementById('chart-naics-balance'),{
+    type:'bar',
+    data:{labels:years, datasets:[{
+      label:'연간 무역수지',
+      data:yearlyBalance,
+      backgroundColor: yearlyBalance.map(v=>v>=0?hexToRgba('#22C5A7',0.8):hexToRgba('#EA5B5B',0.8)),
+      borderRadius:6
+    }]},
+    options:{...baseOptions(), plugins:{...baseOptions().plugins, legend:{display:false}}}
+  });
+
+  // KPIs
+  const last12Imp = data.imports.slice(-12).reduce((a,b)=>a+b,0);
+  const last12Exp = data.exports.slice(-12).reduce((a,b)=>a+b,0);
+  const prev12Imp = data.imports.slice(-24,-12).reduce((a,b)=>a+b,0);
+  const prev12Exp = data.exports.slice(-24,-12).reduce((a,b)=>a+b,0);
+  const wrap = document.getElementById('naicsKpi');
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">연간 수출</span><b>$${(last12Exp/1000).toFixed(2)}B <span class="${last12Exp>=prev12Exp?'up':'down'}" style="font-size:11px">(${((last12Exp-prev12Exp)/prev12Exp*100).toFixed(1)}%)</span></b></div>
+    <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">연간 수입</span><b>$${(last12Imp/1000).toFixed(2)}B <span class="${last12Imp>=prev12Imp?'up':'down'}" style="font-size:11px">(${((last12Imp-prev12Imp)/prev12Imp*100).toFixed(1)}%)</span></b></div>
+    <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">무역수지</span><b style="color:${(last12Exp-last12Imp)>=0?'var(--accent)':'var(--danger)'}">$${((last12Exp-last12Imp)/1000).toFixed(2)}B</b></div>
+    <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">적자 전년비</span><b>${(((last12Imp-last12Exp)-(prev12Imp-prev12Exp))/(prev12Imp-prev12Exp)*100).toFixed(1)}%</b></div>
+  `;
+}
+document.getElementById('naicsPreset').addEventListener('change', renderNaics);
+
+/* =====================================
+   M3
+   ===================================== */
+function renderM3(){
+  const key = document.getElementById('m3Preset').value;
+  const s = m3Series(key);
+  ['orders','inventory','shipments','backlog'].forEach(x=>destroyChart(`m3-${x}`));
+
+  charts['m3-orders'] = new Chart(document.getElementById('chart-m3-orders'),{
+    type:'line', data:{labels:months, datasets:[makeAreaDataset('신규주문', s.orders, '#4F6BED', {fill:true})]},
+    options: baseOptions({extra:{plugins:{legend:{display:false}}}})
+  });
+  charts['m3-inventory'] = new Chart(document.getElementById('chart-m3-inventory'),{
+    type:'line', data:{labels:months, datasets:[makeAreaDataset('재고', s.inv, '#F5A623', {fill:true})]},
+    options: baseOptions({extra:{plugins:{legend:{display:false}}}})
+  });
+  charts['m3-shipments'] = new Chart(document.getElementById('chart-m3-shipments'),{
+    type:'line', data:{labels:months, datasets:[makeAreaDataset('출하량', s.ship, '#22C5A7', {fill:true})]},
+    options: baseOptions({extra:{plugins:{legend:{display:false}}}})
+  });
+  charts['m3-backlog'] = new Chart(document.getElementById('chart-m3-backlog'),{
+    type:'line', data:{labels:months, datasets:[makeAreaDataset('수주잔고', s.back, '#A68BF2', {fill:true})]},
+    options: baseOptions({extra:{plugins:{legend:{display:false}}}})
+  });
+}
+document.getElementById('m3Preset').addEventListener('change', renderM3);
+
+/* =====================================
+   COMPANY OVERLAY
+   ===================================== */
+let overlayState = { company:'hynix', hs:'854232', metric:'revenue' };
+
+function renderCompanyList(){
+  const wrap = document.getElementById('companyList');
+  wrap.innerHTML = '';
+  Object.entries(COMPANIES).forEach(([k,c])=>{
+    const initials = c.name.slice(0,2);
+    const card = document.createElement('div');
+    card.className = 'company-card' + (overlayState.company===k?' selected':'');
+    card.innerHTML = `
+      <div class="company-logo" style="background:${c.color}">${initials}</div>
+      <div>
+        <div class="company-name">${c.name}</div>
+        <div class="company-ticker">${c.ticker}</div>
+      </div>
+    `;
+    card.addEventListener('click', ()=>{
+      overlayState.company = k;
+      overlayState.hs = c.relatedHs;
+      document.getElementById('overlayHs').value = c.relatedHs;
+      renderCompanyList();
+      renderOverlayChart();
+    });
+    wrap.appendChild(card);
+  });
+}
+function renderOverlay(){
+  renderCompanyList();
+  renderOverlayChart();
+}
+function renderOverlayChart(){
+  const c = COMPANIES[overlayState.company];
+  const hs = overlayState.hs;
+  const hsData = HS_DATA[hs];
+  if(!hsData){ return; }
+
+  const metricLabel = {revenue:'매출액', opincome:'영업이익', capex:'CAPEX', margin:'영업이익률'}[overlayState.metric];
+  document.getElementById('overlayTitle').textContent = `${c.name} vs ${hsData.title.replace('🇺🇸 미국 ','').replace(' 추이 ','')} (${metricLabel})`;
+
+  destroyChart('overlay-main'); destroyChart('overlay-corr');
+
+  // Convert monthly HS data to quarterly to align with earnings
+  const korea = hsData.countries.korea || [];
+  const qHs = sumByQuarter(korea);
+
+  let companyMetric;
+  if(overlayState.metric==='margin'){
+    companyMetric = c.revenue.map((r,i)=>+((c.opincome[i]/r)*100).toFixed(1));
+  } else {
+    companyMetric = c[overlayState.metric];
+  }
+
+  const qLabels = quarters;
+  const nPoints = Math.min(qHs.length, qLabels.length, companyMetric.length);
+
+  charts['overlay-main'] = new Chart(document.getElementById('chart-overlay-main'),{
+    type:'bar',
+    data:{
+      labels: qLabels.slice(0,nPoints),
+      datasets:[
+        {label:`한국 대미 ${hs} 수출 (분기 합계)`, type:'bar', data: qHs.slice(0,nPoints),
+         backgroundColor: hexToRgba(COLORS.korea, 0.35), borderColor:COLORS.korea, borderWidth:0, yAxisID:'y', borderRadius:4, order:2},
+        {label:`${c.name} ${metricLabel}`, type:'line', data: companyMetric.slice(0,nPoints),
+         borderColor:c.color, backgroundColor:hexToRgba(c.color,0.1), fill:false, pointRadius:3, tension:0.3, yAxisID:'y1', borderWidth:2.5, order:1}
+      ]
+    },
+    options:{
+      ...baseOptions(),
+      scales:{
+        x:{grid:{color:'transparent'},ticks:{color:cssVar('--text-muted'),maxRotation:0,autoSkip:true,maxTicksLimit:10}},
+        y:{position:'left',grid:{color:cssVar('--border')},ticks:{color:cssVar('--text-muted')},
+           title:{display:true,text:`수출액 (USD M)`, color:cssVar('--text-muted'),font:{size:10.5}}},
+        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:cssVar('--text-muted')},
+           title:{display:true,text:overlayState.metric==='margin'?'영업이익률 (%)':'(억원)', color:cssVar('--text-muted'),font:{size:10.5}}}
+      }
+    }
+  });
+
+  // Correlation scatter
+  const scatter = [];
+  for(let i=0;i<nPoints;i++){ scatter.push({x:qHs[i], y:companyMetric[i]}); }
+  const corr = pearson(qHs.slice(0,nPoints), companyMetric.slice(0,nPoints));
+
+  charts['overlay-corr'] = new Chart(document.getElementById('chart-overlay-corr'),{
+    type:'scatter',
+    data:{datasets:[{
+      label:`상관계수 r = ${corr.toFixed(2)}`,
+      data: scatter,
+      backgroundColor: hexToRgba(c.color, 0.6), borderColor:c.color, pointRadius:5
+    }]},
+    options:{...baseOptions(), plugins:{...baseOptions().plugins, legend:{display:true, position:'top', align:'start'}}, scales:{
+      x:{title:{display:true, text:'수출액', color:cssVar('--text-muted')},grid:{color:cssVar('--border')},ticks:{color:cssVar('--text-muted')}},
+      y:{title:{display:true, text:metricLabel, color:cssVar('--text-muted')},grid:{color:cssVar('--border')},ticks:{color:cssVar('--text-muted')}},
+    }}
+  });
+
+  // Table
+  const tbl = document.getElementById('overlayTable').querySelector('tbody');
+  tbl.innerHTML = '';
+  const recent = Math.min(8, nPoints);
+  const start = nPoints - recent;
+  for(let i=start;i<nPoints;i++){
+    const opm = (c.opincome[i]/c.revenue[i]*100).toFixed(1);
+    tbl.innerHTML += `<tr>
+      <td>${qLabels[i]}</td>
+      <td class="num">${(c.revenue[i]).toLocaleString()}</td>
+      <td class="num">${(c.opincome[i]).toLocaleString()}</td>
+      <td class="num">${(c.capex[i]).toLocaleString()}</td>
+      <td class="num">${opm}%</td>
+    </tr>`;
+  }
+}
+function pearson(x,y){
+  const n=x.length; if(n<2) return 0;
+  const mx=x.reduce((a,b)=>a+b,0)/n, my=y.reduce((a,b)=>a+b,0)/n;
+  let num=0, dx=0, dy=0;
+  for(let i=0;i<n;i++){num+=(x[i]-mx)*(y[i]-my); dx+=(x[i]-mx)**2; dy+=(y[i]-my)**2;}
+  return num/Math.sqrt(dx*dy);
+}
+document.getElementById('overlayHs').addEventListener('change', e=>{
+  overlayState.hs = e.target.value;
+  renderOverlayChart();
+});
+document.querySelectorAll('[data-group="overlay-metric"] button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    overlayState.metric = b.dataset.val;
+    renderOverlayChart();
+  });
+});
+
+/* =====================================
+   Settings handlers
+   ===================================== */
+const KEY_CONFIG = [
+  {storage:'kcs-key',    label:'🇰🇷 관세청 수출입무역통계', inputId:'kcsKey',    scope:'국내 HS 수출입'},
+  {storage:'census-key', label:'🇺🇸 U.S. Census Bureau',   inputId:'censusKey', scope:'미국 HS 수입 · M3'},
+  {storage:'eurostat',   label:'🇪🇺 Eurostat',              inputId:null,         scope:'EU HS 수입', always:true},
+  {storage:'dart-key',   label:'📊 DART',                    inputId:'dartKey',    scope:'기업 공시 · 분기 실적'},
+];
+function saveKey(storageKey, inputId, friendly){
+  const el = document.getElementById(inputId);
+  const v = el ? el.value.trim() : '';
+  if(!v){ alert('키를 입력해주세요.'); return; }
+  localStorage.setItem(storageKey, v);
+  alert(`${friendly} API 키 저장됨.\n샘플 모드 → 실데이터 모드 자동 전환됩니다.`);
+  renderSettings();
+}
+document.getElementById('saveKcsKey').addEventListener('click', ()=>saveKey('kcs-key','kcsKey','관세청'));
+document.getElementById('saveCensusKey').addEventListener('click', ()=>saveKey('census-key','censusKey','Census'));
+document.getElementById('saveDartKey').addEventListener('click', ()=>saveKey('dart-key','dartKey','DART'));
+
+document.getElementById('testEurostat').addEventListener('click', ()=>{
+  alert('Eurostat 연결 테스트 (샘플):\n키 불필요. 실운영 시 바로 연결됩니다.\n엔드포인트 예:\nhttps://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/DS-059668');
+});
+document.getElementById('testKcsKey').addEventListener('click', ()=>{
+  const v = localStorage.getItem('kcs-key');
+  if(!v){ alert('관세청 키가 저장되어 있지 않습니다. 먼저 키를 저장해주세요.'); return; }
+  alert(`관세청 연결 테스트 (샘플):\n키 ${v.slice(0,6)}... 로 테스트 요청 송신됩니다.\n실운영 전환 시 실제 API 호출로 대체.`);
+});
+
+function renderSettings(){
+  // restore input values
+  KEY_CONFIG.forEach(cfg=>{
+    if(cfg.inputId){
+      const v = localStorage.getItem(cfg.storage);
+      if(v){ const el=document.getElementById(cfg.inputId); if(el && !el.value) el.value = v; }
+    }
+  });
+  // status rows
+  const wrap = document.getElementById('keyStatus');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  KEY_CONFIG.forEach(cfg=>{
+    const has = cfg.always || !!localStorage.getItem(cfg.storage);
+    const dotCls = has ? 'on' : 'off';
+    const stateText = has ? (cfg.always?'연결 준비됨 (키 불필요)':'등록됨') : '미등록';
+    wrap.innerHTML += `
+      <div class="status-row">
+        <div><span class="status-dot ${dotCls}"></span>${cfg.label}</div>
+        <div style="color:var(--text-muted);font-size:11.5px">${cfg.scope} · <b style="color:${has?'var(--accent)':'var(--danger)'}">${stateText}</b></div>
+      </div>`;
+  });
+}
+
+/* =====================================
+   INIT
+   ===================================== */
+renderDashboard();
+</script>
+</body>
+</html>
